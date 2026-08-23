@@ -1,0 +1,15 @@
+# Entorno virtual
+.mi_entorno/
+mi_entorno/
+
+# Caché de Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+
+# Archivos del sistema operativo (Opcional)
+.DS_Store
+Thumbs.db
