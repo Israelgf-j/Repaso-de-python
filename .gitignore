@@ -2,8 +2,8 @@
 .venv/
 venv/
 
-.Mi_entorno/
-Mi_entorno/
+.mi_entorno/
+mi_entorno/
 
 
 # Caché de Python

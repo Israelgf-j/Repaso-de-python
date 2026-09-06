@@ -2,10 +2,13 @@
 Diseñar un sistema donde una orden procesa elementos consumibles usando diferentes estrategias de pago abstractas sin conocer los detalles de implementacion concretas.
 """
 
+from abc import ABC, abstractmethod
+
 def main():
 
     # Clase Base Abstracta, ABC
     class MetodoPago:
+        @abstractmethod
         def __init__(self, monto: float):
             self.monto = monto
 
@@ -17,17 +20,20 @@ def main():
     class PagoTarjeta(MetodoPago):
         def __init__(self, monto, numero_tarjeta: str, titular: str):
             super().__init__(monto)
-            self.numero_tarjeta = numero_tarjeta
+            self.__numero_tarjeta = numero_tarjeta
             self.titular = titular
 
         def procesar_pago(self):
-            print("\n\t Usted eligio: PAGO CON TARJETA")
+            print("\n\t Usted eligio: PAGO CON TARJETA\n")
+            print(f"\t{self.__numero_tarjeta}")
+            print(f"\t{self.titular}")
 
-            if len(self.numero_tarjeta) == 16:
-                self.monto = (- 0.02 * self.monto) + self.monto             
-                return True
+            if len(self.__numero_tarjeta) == 16:
+                self.monto = (0.02 * self.monto) + self.monto             
+                return True, self.monto
             else:
-                return False
+                return False, self.monto
+
 
     class PagoCripto(MetodoPago):
         def __init__(self, monto, wallet_addres: str):
@@ -36,7 +42,7 @@ def main():
 
         def procesar_pago(self):
             print("\n\t Usted eligio: PAGO CON WALLET CRIPTO")
-            return True
+            return True, self.monto
 
 
     # Clase Base Abstracta, ABC: Representa un item individual disponible en la tienda.
@@ -47,6 +53,7 @@ def main():
 
         def obtener_precio(self):
             return self.precio
+
 
     # Clase que gestiona los productos que el usuario elige
     class CarritoCompras:
@@ -66,35 +73,24 @@ def main():
             self.total = sum(item.precio for item in self.lista_carrito)   # Aqui dice, vamos a iterar una lista que tiene objetos, "item" representa cada objeto en esa lista, y va a entrar a cada atributo tipo "precio" generando una nueva lista con esos atributos, al final solo suma esos datos de la lista.
             return self.total
 
+
     # Clase que relaciona el carrito finalizado con un metodo de pago existente
     class orden:
         def __init__(self, carrito: CarritoCompras):
             self.carrito = carrito
-            self.estado = False
             
-
         # Obtiene el total desde el carrito, ejecuta "metodo_pago.procesar_pago()", actualiza el estado segun el resultado e imprime un recibo
         def confirmar_orden(self, metodo_pago: MetodoPago):
-            # Vamos a veridicar si los condicionales de los metodos de pago se efecutan de manera adecuada, actualizar el valor de estado
-
             self.carrito.mostrar_carrito()
 
             pago = metodo_pago
-            pago.procesar_pago()
+            estado, monto = pago.procesar_pago()
 
-            if metodo_pago == True:
-                self.estado = True
-                print(f"\nPago realizado EXITOSAMENTE!!!. \nMonto total: {self.carrito.calcular_total()}\n")
+            if estado == True:
+                print(f"\nMonto total: {monto}\nPago realizado EXITOSAMENTE!!!.")
             else:
-                print("\n\t\tAlgo salio mal, pago rechazado. Verifique su numero de cuenta:\n")
-                print(f"\t{pago.numero_tarjeta}")
-                print(f"\t{pago.titular}")
-
-
-
-            
-
-
+                print(f"\nMonto total: {monto}\nAlgo salio mal, pago rechazado. Verifique su numero de cuenta:\n")
+                
 
 
     print(f"\n\n ------------------- SU ORDEN DE COMPRA ES LA SIGUIENTE: -------------------\n")
@@ -115,17 +111,11 @@ def main():
     pago_wall = PagoCripto(carritoShein.calcular_total(), "Mi_Wallet_2312")
     
     pagar = orden(carritoShein)
-    pagar.confirmar_orden(pago_tar)
-    
-    
 
-
-
+    # esta parte imprime todo, tomando los metodos anteriormente descritos.
+    pagar.confirmar_orden(pago_wall)
 
     
-        
-
-
 
 
 
