@@ -17,3 +17,4 @@ __pycache__/
 # Archivos del sistema operativo (Opcional)
 .DS_Store
 Thumbs.db
+notas.txt
