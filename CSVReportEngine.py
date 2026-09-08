@@ -1,8 +1,6 @@
-from abc import ABC
-import json
 import csv
 from dataclasses import dataclass, asdict
-from pprint import pprint
+
 
 
 @dataclass
@@ -60,9 +58,14 @@ class FiltroReporte:
     def filtrar_por_storage_location(self, storage_location: str):
         return [
             registro
-            for registro in self.datos
+            for registro in self.registro
             if registro.Storage_Location == storage_location.strip().upper()
         ]
+
+
+class ExportarCSV:
+    def __init__(self):
+        pass
 
     def exportar_csv(self, reporte: list):
 
@@ -81,7 +84,7 @@ class FiltroReporte:
                 # Usamos 'utf-8-sig' para que Excel abra las tildes y la 'ñ' correctamente
                 escritor = csv.DictWriter(archivo, fieldnames=columnas)
                 
-                escritor.writeheader()         # Escribe la fila de títulos (columnas)
+                escritor.writeheader()      # Escribe la fila de títulos (columnas)
                 escritor.writerows(datos_diccionario) # Escribe todas las filas con tus datos
 
             print(f"\n\t¡Listo! Tus datos se exportaron correctamente a '{nombre_archivo}'.\n")
@@ -90,12 +93,19 @@ class FiltroReporte:
 
 
 
-
+# Cargamos el archivo al programa
 cargador = CargadorCSV("01 Files/Data.csv")
-
+# Guardamos los datos del archivo en una variable
 datos = cargador.cargar_datos()
 
-resultados = cargador.filtrar_por_storage_location("RTNTTD")
 
-for registro in resultados:
+# Aplicamos los filtros requeridos
+filtro = FiltroReporte(datos)
+resultado = filtro.filtrar_por_storage_location("RTNTTD")
+print(len(resultado))
+
+#archivo = ExportarCSV()
+#archivo.exportar_csv(resultado)
+
+for registro in resultado:
     print(registro)
