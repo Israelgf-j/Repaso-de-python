@@ -77,45 +77,72 @@ class FiltroReporte:
             if registro.Storage_Location.upper() == busqueda
         ]
 
-        """
-        def filtrar_registros(self, storage_location: str = None, id_producto: str = None, estado: str = None):
-    # Comenzamos con todos los registros disponibles
-    resultados = self.registro
-    
-    # 1. Filtro por Storage Location (con soporte para '%')
-    if storage_location:
-        busqueda_sl = storage_location.strip().upper()
-        if busqueda_sl.endswith('%'):
-            texto_base = busqueda_sl[:-1]
-            resultados = [r for r in resultados if r.Storage_Location.upper().startswith(texto_base)]
-        else:
-            resultados = [r for r in resultados if r.Storage_Location.upper() == busqueda_sl]
-            
-    # 2. Filtro por ID de Producto (Búsqueda exacta)
-    if id_producto:
-        busqueda_id = id_producto.strip()
-        resultados = [r for r in resultados if r.ID_Producto == busqueda_id]
-        
-    # 3. Filtro por Estado (Búsqueda exacta)
-    if estado:
-        busqueda_est = estado.strip().upper()
-        resultados = [r for r in resultados if r.Estado.upper() == busqueda_est]
-        
-    return resultados
-
-        """
-
-
-    
-
-
     def filtrar_por_item(self, item: int):
-        return [
-            registro
-            for registro in self.registro
-            if registro.Item_Number == item
-        ]
+            return [
+                registro
+                for registro in self.registro
+                if registro.Item_Number == item
+            ]
+        
+    def filtrar_registros(self, storage_location: str = None, item: int = None):
 
+        # 1. Pre-procesar el filtro de Storage Location (Soporta múltiples valores separados por coma)
+        patrones_sl = []
+
+        if storage_location:
+            # Separamos por coma por si quieres buscar "A1%, A2%"
+            for termino in storage_location.split(','):
+                termino_limpio = termino.strip().upper()
+                if not termino_limpio:
+                    continue
+                
+                # Detectamos si es búsqueda parcial (%) o exacta
+                if termino_limpio.endswith('%'):
+                    patrones_sl.append(('EMPIEZA', termino_limpio[:-1]))
+                # Esta parte toma todos los valores que terminen con XXXX [Lo que haya dentreo de patrones, Ej. Patrones = A1, dara 100A1, 101A1]
+                #elif termino_limpio.startswith('%'):
+                #    patrones_sl.append(('TERMINA', termino_limpio[1:]))
+                else:
+                    patrones_sl.append(('EXACTO', termino_limpio))
+
+        # Si no hay ningún filtro, regresamos todo de inmediato sin iterar
+        if not (patrones_sl):
+            return self.registro
+
+        # 2. UN SOLO RECORRIDO para máxima velocidad, aqui comienza el verdadero filtrado.
+        resultados = []
+        for r in self.registro:
+            # Evaluar Storage Location (Búsqueda "OR": si cumple CUALQUIERA de los patrones, pasa)
+            if patrones_sl:
+                # Recuerda que al iterar una lista de objetos, el valor que itera cada elemento de la lista, se convierte en un objeto, por eso puedes entrar a sus atributos, como en r.Storage_Location
+                valor_r = r.Storage_Location.upper()
+                cumple_sl = False
+                
+                for tipo, texto in patrones_sl:
+                    if tipo == 'EMPIEZA' and valor_r.startswith(texto):
+                        cumple_sl = True
+                        break  # Con que cumpla uno, es suficiente
+                
+                    #elif tipo == 'TERMINA' and valor_r.endswith(texto):
+                    #    cumple_sl = True
+                    #    break
+                
+                    elif tipo == 'EXACTO' and valor_r == texto:
+                        cumple_sl = True
+                        break
+                
+                if not cumple_sl: 
+                    continue # Si no cumplió ningún patrón de ubicación, saltamos al siguiente registro
+
+            # Evaluar Item (Búsqueda "AND")
+            if item and r.Item_Number != item:
+                continue
+
+            # Si pasó todos los filtros activos, se agrega al resultado
+            resultados.append(r)
+
+        return resultados
+    
 
 class ExportarCSV:
     def __init__(self):
@@ -155,6 +182,7 @@ datos = cargador.cargar_datos()
 base_datos = FiltroReporte(datos)
 
 
+"""
 # Aplicamos los filtros por localidad
 filtro_sloc = base_datos.filtrar_por_storage_location("RTN%")
 
@@ -162,12 +190,20 @@ for registro in filtro_sloc:
     print(registro)
 
 print(len(filtro_sloc))
+"""
 
 # Aplicamos los filtros por item
 #filtro_item = base_datos.filtrar_por_item(21290744)
 #print(len(filtro_item))
 
+# Aplicamos doble filtro, localidad e item
+#filtro_IySloc = base_datos.filtrar_registros("HOI%", 80850718)
+filtro_IySloc = base_datos.filtrar_registros("A1%, A2%, ASH%, AST%", 80804473)
 
+for r in filtro_IySloc:
+    print(r)
+
+print(len(filtro_IySloc))
 
 #for registro in filtro_item:
 #    print(registro)
