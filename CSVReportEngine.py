@@ -56,10 +56,64 @@ class FiltroReporte:
         self.registro = registro
 
     def filtrar_por_storage_location(self, storage_location: str):
+        # 1. Limpiamos el texto y lo pasamos a mayúsculas
+        busqueda = storage_location.strip().upper()
+
+            # 2. Verificamos si el usuario usó el comodín '%' al final
+        if busqueda.endswith('%'):
+            # Quitamos el '%' para obtener el texto base (ej. "A1%" se convierte en "A1")
+            texto_base = busqueda[:-1]
+            
+            return [
+                registro
+                for registro in self.registro
+                if registro.Storage_Location.upper().startswith(texto_base)
+            ]
+        
+        # 3. Si no usó '%', hacemos la búsqueda exacta como antes
         return [
             registro
             for registro in self.registro
-            if registro.Storage_Location == storage_location.strip().upper()
+            if registro.Storage_Location.upper() == busqueda
+        ]
+
+        """
+        def filtrar_registros(self, storage_location: str = None, id_producto: str = None, estado: str = None):
+    # Comenzamos con todos los registros disponibles
+    resultados = self.registro
+    
+    # 1. Filtro por Storage Location (con soporte para '%')
+    if storage_location:
+        busqueda_sl = storage_location.strip().upper()
+        if busqueda_sl.endswith('%'):
+            texto_base = busqueda_sl[:-1]
+            resultados = [r for r in resultados if r.Storage_Location.upper().startswith(texto_base)]
+        else:
+            resultados = [r for r in resultados if r.Storage_Location.upper() == busqueda_sl]
+            
+    # 2. Filtro por ID de Producto (Búsqueda exacta)
+    if id_producto:
+        busqueda_id = id_producto.strip()
+        resultados = [r for r in resultados if r.ID_Producto == busqueda_id]
+        
+    # 3. Filtro por Estado (Búsqueda exacta)
+    if estado:
+        busqueda_est = estado.strip().upper()
+        resultados = [r for r in resultados if r.Estado.upper() == busqueda_est]
+        
+    return resultados
+
+        """
+
+
+    
+
+
+    def filtrar_por_item(self, item: int):
+        return [
+            registro
+            for registro in self.registro
+            if registro.Item_Number == item
         ]
 
 
@@ -78,7 +132,7 @@ class ExportarCSV:
             columnas = datos_diccionario[0].keys()
 
             # Creamos y escribimos el archivo CSV
-            nombre_archivo = "registro_datos_exportado.csv"
+            nombre_archivo = input("\n\tIngrese el nombre del archivo: ")
             
             with open(nombre_archivo, "w", newline="", encoding="utf-8-sig") as archivo:
                 # Usamos 'utf-8-sig' para que Excel abra las tildes y la 'ñ' correctamente
@@ -95,17 +149,29 @@ class ExportarCSV:
 
 # Cargamos el archivo al programa
 cargador = CargadorCSV("01 Files/Data.csv")
+
 # Guardamos los datos del archivo en una variable
 datos = cargador.cargar_datos()
+base_datos = FiltroReporte(datos)
 
 
-# Aplicamos los filtros requeridos
-filtro = FiltroReporte(datos)
-resultado = filtro.filtrar_por_storage_location("RTNTTD")
-print(len(resultado))
+# Aplicamos los filtros por localidad
+filtro_sloc = base_datos.filtrar_por_storage_location("RTN%")
+
+for registro in filtro_sloc:
+    print(registro)
+
+print(len(filtro_sloc))
+
+# Aplicamos los filtros por item
+#filtro_item = base_datos.filtrar_por_item(21290744)
+#print(len(filtro_item))
+
+
+
+#for registro in filtro_item:
+#    print(registro)
 
 #archivo = ExportarCSV()
-#archivo.exportar_csv(resultado)
+#archivo.exportar_csv(filtro_item)
 
-for registro in resultado:
-    print(registro)
