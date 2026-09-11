@@ -1,5 +1,6 @@
 import csv
 from dataclasses import dataclass, asdict
+from datetime import datetime
 
 
 
@@ -142,6 +143,24 @@ class FiltroReporte:
             resultados.append(r)
 
         return resultados
+
+    def reporte_24hrs(self, reporte: FiltroReporte):
+        # Reporte de 24hrs
+        reporte_24hrs = []
+
+        #Localidades_supply = reporte.filtrar_registros("A1%, A2%")
+        # Datos de Supply
+        Localidades_paso_supply = reporte.filtrar_registros("ASH%, AST%, HO0%, HO1%")
+
+        # Datos de Warehouse
+        #Localidades_warehouse = reporte.filtrar_registros("B1%, C1%, D1%")
+        Localidades_paso_warehouse = reporte.filtrar_registros("BRC%, BLD%, HOI%")
+
+        reporte_24hrs = [*Localidades_paso_supply, *Localidades_paso_warehouse]
+
+        # Ya hicimos la separacion de los datos, ahora falta filtrarlos por fechas diferentes a TODAY, si puede meter el filtro en un solo recorrido sin necesidad de meter otro bucle, adelante
+
+        return reporte_24hrs
     
 
 class ExportarCSV:
@@ -182,6 +201,9 @@ datos = cargador.cargar_datos()
 base_datos = FiltroReporte(datos)
 
 
+rep_24 = base_datos.reporte_24hrs(base_datos)
+
+
 """
 # Aplicamos los filtros por localidad
 filtro_sloc = base_datos.filtrar_por_storage_location("RTN%")
@@ -198,12 +220,12 @@ print(len(filtro_sloc))
 
 # Aplicamos doble filtro, localidad e item
 #filtro_IySloc = base_datos.filtrar_registros("HOI%", 80850718)
-filtro_IySloc = base_datos.filtrar_registros("A1%, A2%, ASH%, AST%", 80804473)
+#filtro_IySloc = base_datos.filtrar_registros("A1%, A2%, ASH%, AST%", 80804473)
 
-for r in filtro_IySloc:
+for r in rep_24:
     print(r)
 
-print(len(filtro_IySloc))
+print(len(rep_24))
 
 #for registro in filtro_item:
 #    print(registro)
