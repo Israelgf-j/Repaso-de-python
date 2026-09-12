@@ -16,6 +16,7 @@ class RegistroDatos:
     Storage_Location: str
     Load_Number: str
     FIFO_Date: str
+    Last_Move_Date: str
 
     def __str__(self):
         return f"{self.__class__.__name__}:\n{asdict(self)}"
@@ -44,7 +45,8 @@ class CargadorCSV:
                     Inventory_Status=fila["Inventory Status"],
                     Storage_Location=fila["Storage Location"],
                     Load_Number=fila["Load Number"],
-                    FIFO_Date=fila["FIFO Date"]
+                    FIFO_Date=fila["FIFO Date"],
+                    Last_Move_Date=datetime.strptime(fila["Last Move Date"], "%m/%d/%Y %I:%M:%S %p")
                 )
 
                 self.datos.append(objeto)
@@ -147,9 +149,11 @@ class FiltroReporte:
     def reporte_24hrs(self, reporte: FiltroReporte):
         # Reporte de 24hrs
         reporte_24hrs = []
+        # 2. Obtener la fecha de HOY de forma automática (solo Año, Mes y Día)
+        hoy = datetime(2026, 9, 5)     #.today().date() 
 
-        #Localidades_supply = reporte.filtrar_registros("A1%, A2%")
         # Datos de Supply
+        #Localidades_supply = reporte.filtrar_registros("A1%, A2%")
         Localidades_paso_supply = reporte.filtrar_registros("ASH%, AST%, HO0%, HO1%")
 
         # Datos de Warehouse
@@ -159,8 +163,17 @@ class FiltroReporte:
         reporte_24hrs = [*Localidades_paso_supply, *Localidades_paso_warehouse]
 
         # Ya hicimos la separacion de los datos, ahora falta filtrarlos por fechas diferentes a TODAY, si puede meter el filtro en un solo recorrido sin necesidad de meter otro bucle, adelante
+        #fechas = [datetime.strptime(fecha, "%d/%m/%Y %H:%M") for fecha in reporte_24hrs.Last_Move_Date]
+        data = []
+        for r in reporte_24hrs:
+            # Convertimos el texto a datetime
+            #fecha_objeto = datetime.strptime(r.Last_Move_Date, "%d/%m/%Y %H:%M")
 
-        return reporte_24hrs
+            # Extraemos solo la parte de la fecha (sin horas) para comparar
+            if r.Last_Move_Date.date() != hoy:
+                data.append(r)
+
+        return data
     
 
 class ExportarCSV:
@@ -222,8 +235,8 @@ print(len(filtro_sloc))
 #filtro_IySloc = base_datos.filtrar_registros("HOI%", 80850718)
 #filtro_IySloc = base_datos.filtrar_registros("A1%, A2%, ASH%, AST%", 80804473)
 
-for r in rep_24:
-    print(r)
+#for r in rep_24:
+#    print(r)
 
 print(len(rep_24))
 
