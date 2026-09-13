@@ -46,7 +46,7 @@ class CargadorCSV:
                     Storage_Location=fila["Storage Location"],
                     Load_Number=fila["Load Number"],
                     FIFO_Date=fila["FIFO Date"],
-                    Last_Move_Date=datetime.strptime(fila["Last Move Date"], "%m/%d/%Y %I:%M:%S %p")
+                    Last_Move_Date=datetime.strptime(fila["Last Move Date"], "%m/%d/%Y %H:%M")
                 )
 
                 self.datos.append(objeto)
@@ -148,32 +148,50 @@ class FiltroReporte:
 
     def reporte_24hrs(self, reporte: FiltroReporte):
         # Reporte de 24hrs
-        reporte_24hrs = []
+        localidades_temporales = []
         # 2. Obtener la fecha de HOY de forma automática (solo Año, Mes y Día)
-        hoy = datetime(2026, 9, 5)     #.today().date() 
+        hoy = datetime(2026, 9, 5).date()     #.today().date() 
 
         # Datos de Supply
-        #Localidades_supply = reporte.filtrar_registros("A1%, A2%")
         Localidades_paso_supply = reporte.filtrar_registros("ASH%, AST%, HO0%, HO1%")
 
         # Datos de Warehouse
         #Localidades_warehouse = reporte.filtrar_registros("B1%, C1%, D1%")
         Localidades_paso_warehouse = reporte.filtrar_registros("BRC%, BLD%, HOI%")
 
-        reporte_24hrs = [*Localidades_paso_supply, *Localidades_paso_warehouse]
+        # Localidades temporales de toda la planta juntas en una sola lista
+        localidades_temporales = [*Localidades_paso_supply, *Localidades_paso_warehouse]
 
         # Ya hicimos la separacion de los datos, ahora falta filtrarlos por fechas diferentes a TODAY, si puede meter el filtro en un solo recorrido sin necesidad de meter otro bucle, adelante
-        #fechas = [datetime.strptime(fecha, "%d/%m/%Y %H:%M") for fecha in reporte_24hrs.Last_Move_Date]
-        data = []
-        for r in reporte_24hrs:
-            # Convertimos el texto a datetime
-            #fecha_objeto = datetime.strptime(r.Last_Move_Date, "%d/%m/%Y %H:%M")
+        reporte24hrs = []
+        for r in localidades_temporales:
 
             # Extraemos solo la parte de la fecha (sin horas) para comparar
-            if r.Last_Move_Date.date() != hoy:
-                data.append(r)
+            if r.Last_Move_Date.date() == hoy:
+                reporte24hrs.append(r)
 
-        return data
+        print(f"Reporte de 24 horas, dia del reporte: {hoy}")
+
+        return reporte24hrs
+
+    def capacidad_almacenes(self, reporte: FiltroReporte):
+        # Capacidad de los racks en los almacenes de supply y warehouse
+        localidades_racks = []
+
+        # Datos de Supply
+        Localidades_supply = reporte.filtrar_registros("A1%, A2%")
+
+        # Datos de Warehouse
+        Localidades_warehouse = reporte.filtrar_registros("B1%, C1%, D1%")
+
+        # Localidades temporales de toda la planta juntas en una sola lista
+        localidades_racks = [*Localidades_supply, *Localidades_warehouse]
+
+        for r in localidades_racks:
+            print(r)
+
+        return localidades_racks
+
     
 
 class ExportarCSV:
@@ -215,6 +233,7 @@ base_datos = FiltroReporte(datos)
 
 
 rep_24 = base_datos.reporte_24hrs(base_datos)
+reporte_capacidad = base_datos.capacidad_almacenes(base_datos)
 
 
 """
@@ -238,7 +257,8 @@ print(len(filtro_sloc))
 #for r in rep_24:
 #    print(r)
 
-print(len(rep_24))
+#print(len(rep_24))
+print(len(reporte_capacidad))
 
 #for registro in filtro_item:
 #    print(registro)
