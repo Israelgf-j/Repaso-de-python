@@ -46,7 +46,7 @@ class CargadorCSV:
                     Storage_Location=fila["Storage Location"],
                     Load_Number=fila["Load Number"],
                     FIFO_Date=fila["FIFO Date"],
-                    Last_Move_Date=datetime.strptime(fila["Last Move Date"], "%m/%d/%Y %H:%M")
+                    Last_Move_Date=datetime.strptime(fila["Last Move Date"], "%m/%d/%Y %I:%M:%S %p")    # "%m/%d/%Y %H:%"
                 )
 
                 self.datos.append(objeto)
@@ -176,21 +176,23 @@ class FiltroReporte:
 
     def capacidad_almacenes(self, reporte: FiltroReporte):
         # Capacidad de los racks en los almacenes de supply y warehouse
-        localidades_racks = []
+        #localidades_racks = []
 
         # Datos de Supply
         Localidades_supply = reporte.filtrar_registros("A1%, A2%")
+        Localidades_paso_supply = reporte.filtrar_registros("ASH%, AST%, HO0%, HO1%")
 
         # Datos de Warehouse
         Localidades_warehouse = reporte.filtrar_registros("B1%, C1%, D1%")
+        Localidades_paso_warehouse = reporte.filtrar_registros("BRC%, BLD%, HOI%")
 
         # Localidades temporales de toda la planta juntas en una sola lista
-        localidades_racks = [*Localidades_supply, *Localidades_warehouse]
+        #localidades_racks = [*Localidades_supply, *Localidades_warehouse]
 
-        for r in localidades_racks:
-            print(r)
+        #for r in localidades_racks:
+        #    print(r)
 
-        return localidades_racks
+        return Localidades_supply, Localidades_paso_supply, Localidades_warehouse, Localidades_paso_warehouse
 
     
 
@@ -198,30 +200,48 @@ class ExportarCSV:
     def __init__(self):
         pass
 
-    def exportar_csv(self, reporte: list):
+    def exportar_archivo(self, reporte_capacidad: list):
 
-        if reporte:  # Verificamos que la lista no esté vacía
+        if reporte_capacidad:  # Verificamos que no venga vacío
             
-            # Convertimos todos tus objetos a una lista de diccionarios puros
-            datos_diccionario = [asdict(registro) for registro in reporte]
-            
-            # Extraemos automáticamente los nombres de tus 10+ atributos para las columnas
-            columnas = datos_diccionario[0].keys()
-
-            # Creamos y escribimos el archivo CSV
             nombre_archivo = input("\n\tIngrese el nombre del archivo: ")
+            if not nombre_archivo.endswith('.csv'):
+                nombre_archivo += '.csv'
             
-            with open(nombre_archivo, "w", newline="", encoding="utf-8-sig") as archivo:
-                # Usamos 'utf-8-sig' para que Excel abra las tildes y la 'ñ' correctamente
-                escritor = csv.DictWriter(archivo, fieldnames=columnas)
-                
-                escritor.writeheader()      # Escribe la fila de títulos (columnas)
-                escritor.writerows(datos_diccionario) # Escribe todas las filas con tus datos
+            try:
+                with open(nombre_archivo, "w", newline="", encoding="utf-8-sig") as archivo:
+                    escritor_general = csv.writer(archivo)
 
-            print(f"\n\t¡Listo! Tus datos se exportaron correctamente a '{nombre_archivo}'.\n")
+                    # RECORREMOS LAS LISTAS DIRECTAMENTE
+                    for i, sublista in enumerate(reporte_capacidad):
+                        if not sublista:
+                            continue
+
+                        # Convertimos los objetos de la sublista actual a diccionarios
+                        datos_diccionario = [asdict(registro) for registro in sublista]
+                        columnas = datos_diccionario[0].keys()
+
+                        # Pedimos el título para esta sección
+                        titulo = input(f"\tIngrese el título para la lista #{i+1}: ")
+
+                        # 1. Escribimos el título
+                        escritor_general.writerow([titulo])
+                        
+                        # 2. Escribimos la tabla de datos
+                        escritor_dict = csv.DictWriter(archivo, fieldnames=columnas)
+                        escritor_dict.writeheader()
+                        escritor_dict.writerows(datos_diccionario)
+
+                        # 3. Ponemos el salto de línea si no es la última lista
+                        if i < len(reporte_capacidad) - 1:
+                            escritor_general.writerow([])
+
+                print(f"\n\t¡Listo! Tus datos se exportaron correctamente a '{nombre_archivo}'.\n")
+            
+            except Exception as e:
+                print(f"\n\tOcurrió un error al guardar el archivo: {e}\n")
         else:
             print("\n\tLa lista está vacía, no hay nada que exportar.\n")
-
 
 
 # Cargamos el archivo al programa
@@ -264,5 +284,10 @@ print(len(reporte_capacidad))
 #    print(registro)
 
 #archivo = ExportarCSV()
-#archivo.exportar_csv(filtro_item)
+#archivo.exportar_archivo(filtro_item)
 
+#print(reporte_capacidad)
+#print(len(reporte_capacidad))
+
+exportar_capacidad = ExportarCSV()
+exportar_capacidad.exportar_archivo(reporte_capacidad)
