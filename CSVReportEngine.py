@@ -44,9 +44,9 @@ class CargadorCSV:
                     Lot_Number=fila["Lot Number"],
                     Inventory_Status=fila["Inventory Status"],
                     Storage_Location=fila["Storage Location"],
-                    Load_Number=fila["Load Number"],
+                    Load_Number=str(fila["Load Number"]),
                     FIFO_Date=fila["FIFO Date"],
-                    Last_Move_Date=datetime.strptime(fila["Last Move Date"], "%m/%d/%Y %I:%M:%S %p")    # "%m/%d/%Y %H:%"
+                    Last_Move_Date=datetime.strptime(fila["Last Move Date"].strip(), "%m/%d/%Y %H:%M")    # "%m/%d/%Y %H:%M"  #"%m/%d/%Y %I:%M:%S %p"
                 )
 
                 self.datos.append(objeto)
@@ -146,18 +146,18 @@ class FiltroReporte:
 
         return resultados
 
-    def reporte_24hrs(self, reporte: FiltroReporte):
+    def reporte_24hrs(self):
         # Reporte de 24hrs
         localidades_temporales = []
         # 2. Obtener la fecha de HOY de forma automática (solo Año, Mes y Día)
-        hoy = datetime(2026, 9, 5).date()     #.today().date() 
+        hoy = datetime.today().date() 
 
         # Datos de Supply
-        Localidades_paso_supply = reporte.filtrar_registros("ASH%, AST%, HO0%, HO1%")
+        Localidades_paso_supply = self.filtrar_registros("ASH%, AST%, HO0%, HO1%")
 
         # Datos de Warehouse
         #Localidades_warehouse = reporte.filtrar_registros("B1%, C1%, D1%")
-        Localidades_paso_warehouse = reporte.filtrar_registros("BRC%, BLD%, HOI%")
+        Localidades_paso_warehouse = self.filtrar_registros("BRC%, BLD%, HOI%")
 
         # Localidades temporales de toda la planta juntas en una sola lista
         localidades_temporales = [*Localidades_paso_supply, *Localidades_paso_warehouse]
@@ -167,43 +167,46 @@ class FiltroReporte:
         for r in localidades_temporales:
 
             # Extraemos solo la parte de la fecha (sin horas) para comparar
-            if r.Last_Move_Date.date() == hoy:
+            if r.Last_Move_Date.date() != hoy:
                 reporte24hrs.append(r)
 
-        print(f"Reporte de 24 horas, dia del reporte: {hoy}")
+        print(f"\n\tReporte de 24 horas, dia del reporte: {hoy}, con {len(reporte24hrs)} pallets")
 
         return reporte24hrs
 
-    def capacidad_almacenes(self, reporte: FiltroReporte):
+    def capacidad_almacenes(self):
         # Capacidad de los racks en los almacenes de supply y warehouse
-        #localidades_racks = []
 
         # Datos de Supply
-        Localidades_supply = reporte.filtrar_registros("A1%, A2%")
-        Localidades_paso_supply = reporte.filtrar_registros("ASH%, AST%, HO0%, HO1%")
+        Localidades_supply = self.filtrar_registros("A1%, A2%")
+        Localidades_paso_supply = self.filtrar_registros("ASH%, AST%, HO0%, HO1%")
 
         # Datos de Warehouse
-        Localidades_warehouse = reporte.filtrar_registros("B1%, C1%, D1%")
-        Localidades_paso_warehouse = reporte.filtrar_registros("BRC%, BLD%, HOI%")
+        Localidades_warehouse = self.filtrar_registros("B1%, C1%, D1%")
+        Localidades_paso_warehouse = self.filtrar_registros("BRC%, BLD%, HOI%")
 
-        # Localidades temporales de toda la planta juntas en una sola lista
-        #localidades_racks = [*Localidades_supply, *Localidades_warehouse]
-
-        #for r in localidades_racks:
-        #    print(r)
+        print(f"\n\tTotal en Supply: {len(Localidades_paso_supply)}")
+        print(f"\n\tTotal en Supply: {len(Localidades_supply)}")
+        print(f"\n\tTotal en Warehouse: {len(Localidades_paso_warehouse)}")
+        print(f"\n\tTotal en Warehouse: {len(Localidades_warehouse)}")
 
         return Localidades_supply, Localidades_paso_supply, Localidades_warehouse, Localidades_paso_warehouse
 
-    
 
 class ExportarCSV:
     def __init__(self):
         pass
 
-    def exportar_archivo(self, reporte_capacidad: list):
-
-        if reporte_capacidad:  # Verificamos que no venga vacío
+    def exportar_archivo(self, reporte_datos: list):
+        if reporte_datos:  # Verificamos que no venga vacío
             
+            # --- VALIDACIÓN CLAVE ---
+            # Si el primer elemento NO es una lista, significa que nos pasaron un reporte individual.
+            # Lo envolvemos en una lista para que el bucle "for i, sublista" funcione siempre.
+            if not isinstance(reporte_datos[0], list):
+                reporte_datos = [reporte_datos]
+            # ------------------------
+
             nombre_archivo = input("\n\tIngrese el nombre del archivo: ")
             if not nombre_archivo.endswith('.csv'):
                 nombre_archivo += '.csv'
@@ -213,7 +216,7 @@ class ExportarCSV:
                     escritor_general = csv.writer(archivo)
 
                     # RECORREMOS LAS LISTAS DIRECTAMENTE
-                    for i, sublista in enumerate(reporte_capacidad):
+                    for i, sublista in enumerate(reporte_datos):
                         if not sublista:
                             continue
 
@@ -233,7 +236,7 @@ class ExportarCSV:
                         escritor_dict.writerows(datos_diccionario)
 
                         # 3. Ponemos el salto de línea si no es la última lista
-                        if i < len(reporte_capacidad) - 1:
+                        if i < len(reporte_datos) - 1:
                             escritor_general.writerow([])
 
                 print(f"\n\t¡Listo! Tus datos se exportaron correctamente a '{nombre_archivo}'.\n")
@@ -245,15 +248,14 @@ class ExportarCSV:
 
 
 # Cargamos el archivo al programa
-cargador = CargadorCSV("01 Files/Data.csv")
+cargador = CargadorCSV("01 Files/14 Septiembre 2026.csv")
 
 # Guardamos los datos del archivo en una variable
 datos = cargador.cargar_datos()
 base_datos = FiltroReporte(datos)
 
-
-rep_24 = base_datos.reporte_24hrs(base_datos)
-reporte_capacidad = base_datos.capacidad_almacenes(base_datos)
+reporte_24 = base_datos.reporte_24hrs()
+#reporte_capacidad = base_datos.capacidad_almacenes()
 
 
 """
@@ -277,8 +279,8 @@ print(len(filtro_sloc))
 #for r in rep_24:
 #    print(r)
 
-#print(len(rep_24))
-print(len(reporte_capacidad))
+
+#print(len(reporte_capacidad))
 
 #for registro in filtro_item:
 #    print(registro)
@@ -289,5 +291,8 @@ print(len(reporte_capacidad))
 #print(reporte_capacidad)
 #print(len(reporte_capacidad))
 
-exportar_capacidad = ExportarCSV()
-exportar_capacidad.exportar_archivo(reporte_capacidad)
+#exportar_capacidad = ExportarCSV()
+#exportar_capacidad.exportar_archivo(reporte_capacidad)
+
+exportar_24hrs = ExportarCSV()
+exportar_24hrs.exportar_archivo(reporte_24)
