@@ -17,6 +17,7 @@ class RegistroDatos:
     Load_Number: str
     FIFO_Date: str
     Last_Move_Date: str
+    Supplier_Lot_Number: str
 
     def __str__(self):
         return f"{self.__class__.__name__}:\n{asdict(self)}"
@@ -46,7 +47,8 @@ class CargadorCSV:
                     Storage_Location=fila["Storage Location"],
                     Load_Number=str(fila["Load Number"]),
                     FIFO_Date=fila["FIFO Date"],
-                    Last_Move_Date=datetime.strptime(fila["Last Move Date"].strip(), "%m/%d/%Y %H:%M")    # "%m/%d/%Y %H:%M"  #"%m/%d/%Y %I:%M:%S %p"
+                    Last_Move_Date=datetime.strptime(fila["Last Move Date"].strip(), "%m/%d/%Y %I:%M:%S %p"),    # "%m/%d/%Y %H:%M"  #"%m/%d/%Y %I:%M:%S %p"
+                    Supplier_Lot_Number=fila["Supplier Lot Number"]
                 )
 
                 self.datos.append(objeto)
@@ -248,14 +250,14 @@ class ExportarCSV:
 
 
 # Cargamos el archivo al programa
-cargador = CargadorCSV("01 Files/14 Septiembre 2026.csv")
+cargador = CargadorCSV("01 Files/22 Septiembre 2026.csv")
 
 # Guardamos los datos del archivo en una variable
 datos = cargador.cargar_datos()
 base_datos = FiltroReporte(datos)
 
 reporte_24 = base_datos.reporte_24hrs()
-#reporte_capacidad = base_datos.capacidad_almacenes()
+# reporte_capacidad = base_datos.capacidad_almacenes()
 
 
 """
