@@ -250,7 +250,7 @@ class ExportarCSV:
 
 
 # Cargamos el archivo al programa
-cargador = CargadorCSV("01 Files/22 Septiembre 2026.csv")
+cargador = CargadorCSV("01 Files/23 Septiembre 2026.csv")
 
 # Guardamos los datos del archivo en una variable
 datos = cargador.cargar_datos()

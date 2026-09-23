@@ -67,6 +67,10 @@ class Material:
 
     @E.setter
     def E(self, valor):
+        
+        if not isinstance(valor, (int, float)):
+            raise TypeError("X debe ser numérico.", valor)
+        
         if valor <= 0:
             raise ValueError("E debe ser mayor que cero.", valor)
 

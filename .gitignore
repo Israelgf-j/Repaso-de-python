@@ -5,6 +5,9 @@ venv/
 .mi_entorno/
 mi_entorno/
 
+# con esto excluimos los archivos de nuestro proyecto de inventarios
+inventory_project/data/*.csv
+inventory_project/database/*.db
 
 # Caché de Python
 __pycache__/
