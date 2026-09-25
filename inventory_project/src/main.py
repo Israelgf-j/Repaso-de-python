@@ -82,23 +82,66 @@ try:
         # Saltar encabezados
         print("\n\n\tPrimera fila:")
         primera_fila = next(lector_csv)
-        print(primera_fila["Last Move Date"])
         print(primera_fila)
+        #print(primera_fila["Last Move Date"])
 
+        
         for fila in lector_csv:
-            print("CSV:", fila["Last Move Date"])
-            fecha = convertir_fecha(fila["Last Move Date"])
-            print("SQLite:", fecha)
+            #print("CSV:", fila["Last Move Date"])
+            fecha1 = convertir_fecha(fila["Last Move Date"])
+            fecha2 = convertir_fecha(fila["FIFO Date"])
+            fecha3 = convertir_fecha(fila["Manufactured Date"])
+            fecha4 = convertir_fecha(fila["Received Date"])
+            #print("SQLite:", fecha)
+            #print()
 
+            fila_transformada = (
+                fila["Building ID"],
+                fila["Item Number"],
+                fila["Description"],
+                float(fila["Unit Quantity"]),
+                fila["Stocking Unit of Measure"],
+                fila["Lot Number"],
+                fila["Inventory Status"],
+                fila["Storage Location"],
+                fila["Load Number"],
+                fecha2,
+                fecha1,
+                fila["Supplier Lot Number"],
+                fila["Display Unit Quantity"],
+                fila["Area"],
+                fecha3,
+                fecha4
+            )
 
+            #print(fila_transformada)
 
+            # Inserción masiva
+            cursor.execute("""INSERT INTO inventario (
+                building_id,
+                item_number,
+                description,
+                unit_quantity,
+                stocking_unit_of_measure,
+                lot_number,
+                inventory_status,
+                storage_location,
+                load_number,
+                fifo_date,        
+                last_move_date,
+                supplier_lot_number,
+                display_unit_quantity,
+                area,
+                manufactured_date,
+                received_date
+            )
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", fila_transformada) 
 
-        # Inserción masiva
-        sql_insert = "INSERT INTO inventario VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);"
-        cursor.executemany(sql_insert, lector_csv)
+        connection.commit()
+        
         
     # Guardar cambios
-    connection.commit()
+    
     print("\n\t¡Éxito! Se han importado correctamente las filas del CSV.\n")
 
     # 5. Creamos el SELECT
