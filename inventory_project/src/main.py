@@ -76,25 +76,29 @@ try:
     with open(RUTA_CSV, 'r', encoding='utf-8', newline="") as f:
 
         lector_csv = csv.DictReader(f)
+        print("\n\t1 Archivo Abierto ---")
         print("\n\n\tEncabezados:")
-        print(lector_csv.fieldnames)
+        encabezados_csv = lector_csv.fieldnames
+        print(encabezados_csv, end="\n\n")
 
         # Saltar encabezados
-        print("\n\n\tPrimera fila:")
-        primera_fila = next(lector_csv)
-        print(primera_fila)
-        #print(primera_fila["Last Move Date"])
+        # print("\n\n\tPrimera fila:")
+        # primera_fila = next(lector_csv)
+        # print(primera_fila)
+        # print(primera_fila["Last Move Date"])
 
         
         for fila in lector_csv:
+            """
             #print("CSV:", fila["Last Move Date"])
-            fecha1 = convertir_fecha(fila["Last Move Date"])
-            fecha2 = convertir_fecha(fila["FIFO Date"])
-            fecha3 = convertir_fecha(fila["Manufactured Date"])
-            fecha4 = convertir_fecha(fila["Received Date"])
+            #fecha1 = convertir_fecha(fila["Last Move Date"])
+            #fecha2 = convertir_fecha(fila["FIFO Date"])
+            #fecha3 = convertir_fecha(fila["Manufactured Date"])
+            #fecha4 = convertir_fecha(fila["Received Date"])
             #print("SQLite:", fecha)
             #print()
 
+            
             fila_transformada = (
                 fila["Building ID"],
                 fila["Item Number"],
@@ -112,12 +116,58 @@ try:
                 fila["Area"],
                 fecha3,
                 fecha4
-            )
+            )"""
 
+            fila_sqlite = {}
+
+            print("\n\tDatos del archivo CSV: ".capitalize())
+            print(fila, sep="\n\n")
+            
+            for columna_sqlite, columna_csv in mapeo_encabezados.items():
+
+                valor = fila[columna_csv]   # Toma de toda la 1ra fila de tu archivo CSV, toma el valor que coincida con la clave fila[columna_csv], que sera segun el diccionario "mapeo_encabezados" definido antes, el "valor" almacena el dato que este en la lista y cumpla con el encabezado que le toque en la iteracion.
+                columnas_faltantes = []
+
+                if columna_sqlite == "unit_quantity":
+                    try:
+                        valor = float(valor)
+                    except ValueError:
+                        valor = None
+
+                elif columna_sqlite in ("fifo_date", "last_move_date", "manufactured_date", "received_date"):
+                    try:
+                        valor = convertir_fecha(valor)
+                    except ValueError:
+                        valor = None
+
+                fila_sqlite[columna_sqlite] = valor
+
+                if columna_csv not in columna_csv:
+                    columnas_faltantes.append(columna_csv)
+                    print("\n\t Faltan columnas:")
+
+                if columnas_faltantes:
+                    raise ValueError(f"Faltan columnas requeridas en el CVS: {columnas_faltantes}")
+                
             #print(fila_transformada)
+            #print(fila_sqlite)
 
-            # Inserción masiva
-            cursor.execute("""INSERT INTO inventario (
+            fila_transformada = tuple(fila_sqlite[columna] for columna in mapeo_encabezados.keys())
+            print(sep="\n\n")
+
+            print("\n\t Datos del sqlite:".capitalize())
+            print(fila_transformada)
+
+            if fila[columna_csv] == "unit_quantity" and isinstance(fila[columna_csv], float) == False:
+                print(f"\n\tLos datos de 'unit_quantity' deben ser tipo: float")
+                
+
+            break
+
+            
+            # Inserción masiva a sqlite
+            cursor.execute("""
+                INSERT INTO inventario (
                 building_id,
                 item_number,
                 description,
@@ -125,7 +175,7 @@ try:
                 stocking_unit_of_measure,
                 lot_number,
                 inventory_status,
-                storage_location,
+                storage_location,   
                 load_number,
                 fifo_date,        
                 last_move_date,
@@ -135,9 +185,34 @@ try:
                 manufactured_date,
                 received_date
             )
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", fila_transformada) 
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", fila_transformada)
 
-        connection.commit()
+
+            """print("\n\t------------ Impresion de prueba ------------\n",
+                fila["Building ID"],
+                fila["Item Number"],
+                fila["Description"],
+                fila["Unit Quantity"],
+                fila["Stocking Unit of Measure"],
+                fila["Lot Number"],
+                fila["Inventory Status"],
+                fila["Storage Location"],
+                fila["Load Number"],
+                fecha2,
+                fecha1,
+                fila["Supplier Lot Number"],
+                fila["Display Unit Quantity"],
+                fila["Area"],
+                fecha3,
+                fecha4,
+                sep="\n"
+                )"""
+
+            
+
+            
+
+        #connection.commit()
         
         
     # Guardar cambios
