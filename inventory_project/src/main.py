@@ -10,7 +10,6 @@ RUTA_CSV = os.path.join(BASE_DIR, '..', 'data', 'inventory.csv')
 
 connection = None
 
-
 def convertir_fecha(fecha):
 
     if not fecha:
@@ -50,7 +49,7 @@ try:
         received_date TEXT
     );
     """)
-    print("Tabla 'inventario' creada exitosamente.")
+    print("\n\tTabla 'inventario' creada exitosamente.")
 
     mapeo_encabezados = {
         "building_id": "Building ID",
@@ -76,10 +75,10 @@ try:
     with open(RUTA_CSV, 'r', encoding='utf-8', newline="") as f:
 
         lector_csv = csv.DictReader(f)
-        print("\n\t1 Archivo Abierto ---")
-        print("\n\n\tEncabezados:")
+        #print("\n\t1 Archivo Abierto ---")
+        #print("\n\n\tEncabezados:")
         encabezados_csv = lector_csv.fieldnames
-        print(encabezados_csv, end="\n\n")
+        #print(encabezados_csv, end="\n\n")
 
         # Saltar encabezados
         # print("\n\n\tPrimera fila:")
@@ -120,8 +119,8 @@ try:
 
             fila_sqlite = {}
 
-            print("\n\tDatos del archivo CSV: ".capitalize())
-            print(fila, sep="\n\n")
+            #print("\n\tDatos del archivo CSV: ".capitalize())
+            #print(fila, sep="\n\n")
             
             for columna_sqlite, columna_csv in mapeo_encabezados.items():
 
@@ -153,17 +152,16 @@ try:
             #print(fila_sqlite)
 
             fila_transformada = tuple(fila_sqlite[columna] for columna in mapeo_encabezados.keys())
-            print(sep="\n\n")
+            #print(sep="\n\n")
 
-            print("\n\t Datos del sqlite:".capitalize())
-            print(fila_transformada)
+            #print("\n\t Datos del sqlite:".capitalize())
+            #print(fila_transformada)
 
             if fila[columna_csv] == "unit_quantity" and isinstance(fila[columna_csv], float) == False:
                 print(f"\n\tLos datos de 'unit_quantity' deben ser tipo: float")
-                
+                break
 
-            break
-
+            
             
             # Inserción masiva a sqlite
             cursor.execute("""
@@ -212,7 +210,7 @@ try:
 
             
 
-        #connection.commit()
+        connection.commit()
         
         
     # Guardar cambios
@@ -222,7 +220,8 @@ try:
     # 5. Creamos el SELECT
     # NOTA: el LIMIT va al final de todo
 
-    """ cursor.execute(
+    """
+    cursor.execute(
     SELECT load_number, item_number, unit_quantity, stocking_unit_of_measure, last_move_date
     FROM inventario
     WHERE unit_quantity > 1000
@@ -230,12 +229,10 @@ try:
     LIMIT 10
     ) """
 
-    """cursor.execute(
-    SELECT last_move_date, substr(last_move_date, 6, 4) || '-' || substr(last_move_date, 1, 1) || '-' || substr(last_move_date, 3, 2)
-    FROM inventario
-    LIMIT 5
-    )"""
+    print("\n\tTotal de datos leidos de la base de datos.")
+    cursor.execute("SELECT COUNT(*) FROM inventario LIMIT 5")
 
+    print(cursor.fetchall())
 
 except sqlite3.OperationalError as e:
     print(f"\n\tError de SQLite: {e}")
