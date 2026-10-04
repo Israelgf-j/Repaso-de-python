@@ -72,7 +72,7 @@ try:
 
     # 4. Leer el CSV e insertar los datos
     print(f"\n\tAbriendo archivo CSV en: {RUTA_CSV}...")
-    with open(RUTA_CSV, 'r', encoding='utf-8', newline="") as f:
+    with open(RUTA_CSV, 'r', encoding='utf-8-sig', newline="") as f:
 
         lector_csv = csv.DictReader(f)
         #print("\n\t1 Archivo Abierto ---")
@@ -206,9 +206,6 @@ try:
                 sep="\n"
                 )"""
 
-            
-
-            
 
         connection.commit()
         
