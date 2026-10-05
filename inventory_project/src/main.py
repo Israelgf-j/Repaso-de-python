@@ -180,6 +180,44 @@ class Imprtador_inventario:
         return datos
 
 
+    def exportar_a_csv(self, datos, nombre_archivo):
+        """
+        Exporta los datos de la última consulta a un archivo CSV 
+        detectando los encabezados automáticamente.
+        """
+        if not datos:
+            print(f"\n\tAdvertencia: No hay datos para exportar a '{nombre_archivo}'.")
+            return
+
+        # 🌟 DETECCIÓN AUTOMÁTICA: Extrae los nombres de las columnas del último SELECT ejecutado
+        if self.cursor and self.cursor.description:
+            encabezados = [columna[0] for columna in self.cursor.description]
+        else:
+            print("\n\tError: No se encontraron metadatos de la consulta.")
+            return
+
+        # Ruta de salida dinámica
+        ruta_salida = os.path.join(self.BASE_DIR, '..', 'data', nombre_archivo)
+        
+        try:
+            os.makedirs(os.path.dirname(ruta_salida), exist_ok=True)
+            
+            with open(ruta_salida, 'w', encoding='utf-8-sig', newline="") as f:
+                escritor_csv = csv.writer(f)
+                
+                # 1. Escribimos los encabezados detectados automáticamente
+                escritor_csv.writerow(encabezados)
+                
+                # 2. Escribimos las filas
+                escritor_csv.writerows(datos)
+                
+            print(f"\n\t¡Éxito! Consulta exportada correctamente a: {ruta_salida}")
+            
+        except Exception as e:
+            print(f"\n\tError al exportar a CSV: {e}")
+
+
+
 def main():
     with Imprtador_inventario() as gestor:
         gestor.leer_CSV()
@@ -191,9 +229,13 @@ def main():
         total = gestor.total_inventario()
         print(f"\tTotal real guardado en BD: {total} registros.")
 
-        datos = gestor.mostrar_datos()
-        print(f"\tPrimeros 10 datos (con cantidad > 1000):\n {datos}")
+        datos_filtrados = gestor.mostrar_datos()
+        print(f"\tPrimeros 10 datos (con cantidad > 1000):\n\n", datos_filtrados)
 
+        gestor.exportar_a_csv(
+        datos=datos_filtrados, 
+        nombre_archivo="reporte_automatico.csv"
+        )
 
 if __name__ == "__main__":
     main()
