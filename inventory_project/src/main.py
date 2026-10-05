@@ -180,24 +180,69 @@ class Imprtador_inventario:
         return datos
 
 
+    def reporte_24hrs(self):
+        """
+        Retorna registros filtrados por ubicaciones específicas (HO, AST, ASH, BRC, BLD)
+        y cuya fecha de último movimiento sea estrictamente anterior al día de hoy.
+        """
+        print("\n\tEjecutando consulta de ubicaciones históricas...")
+        
+        query = """
+            SELECT 
+                load_number, 
+                item_number, 
+                unit_quantity, 
+                storage_location, 
+                supplier_lot_number, 
+                lot_number, 
+                last_move_date
+                -- 🌟 NUEVA COLUMNA: Calcula los días exactos transcurridos como un número entero
+                CAST(julianday('now', 'localtime') - julianday(last_move_date) AS INTEGER) AS dias_perdido
+            FROM inventario
+            WHERE (
+                storage_location LIKE 'HO%' 
+                OR storage_location LIKE 'AST%' 
+                OR storage_location LIKE 'ASH%' 
+                OR storage_location LIKE 'BRC%' 
+                OR storage_location LIKE 'BLD%'
+            )
+            -- date(last_move_date) extrae solo 'YYYY-MM-DD' para compararlo con el día de hoy
+            AND date(last_move_date) < date('now', 'localtime')
+            ORDER BY last_move_date DESC;
+        """
+        
+        self.cursor.execute(query)
+        return self.cursor.fetchall()
+
+
     def exportar_a_csv(self, datos, nombre_archivo):
         """
         Exporta los datos de la última consulta a un archivo CSV 
-        detectando los encabezados automáticamente.
+        detectando encabezados automáticamente y añadiendo fecha/hora al nombre.
         """
         if not datos:
-            print(f"\n\tAdvertencia: No hay datos para exportar a '{nombre_archivo}'.")
+            print(f"\n\tAdvertencia: No hay datos para exportar.")
             return
 
-        # 🌟 DETECCIÓN AUTOMÁTICA: Extrae los nombres de las columnas del último SELECT ejecutado
+        # 1. Detección automática de encabezados
         if self.cursor and self.cursor.description:
             encabezados = [columna[0] for columna in self.cursor.description]
         else:
             print("\n\tError: No se encontraron metadatos de la consulta.")
             return
 
-        # Ruta de salida dinámica
-        ruta_salida = os.path.join(self.BASE_DIR, '..', 'data', nombre_archivo)
+        # 🌟 NUEVO: Generamos el timestamp (Ej: 20261005_0922)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M")
+        
+        # Separamos el nombre de la extensión para meter el timestamp en medio
+        nombre_base, extension = os.path.splitext(nombre_archivo)
+        if not extension:
+            extension = ".csv"
+            
+        nombre_final = f"{nombre_base}_{timestamp}{extension}"
+
+        # Ruta de salida dinámica con el nombre final
+        ruta_salida = os.path.join(self.BASE_DIR, '..', 'data', nombre_final)
         
         try:
             os.makedirs(os.path.dirname(ruta_salida), exist_ok=True)
@@ -205,16 +250,15 @@ class Imprtador_inventario:
             with open(ruta_salida, 'w', encoding='utf-8-sig', newline="") as f:
                 escritor_csv = csv.writer(f)
                 
-                # 1. Escribimos los encabezados detectados automáticamente
+                # Escribimos encabezados y filas
                 escritor_csv.writerow(encabezados)
-                
-                # 2. Escribimos las filas
                 escritor_csv.writerows(datos)
                 
             print(f"\n\t¡Éxito! Consulta exportada correctamente a: {ruta_salida}")
             
         except Exception as e:
             print(f"\n\tError al exportar a CSV: {e}")
+
 
 
 
@@ -229,13 +273,15 @@ def main():
         total = gestor.total_inventario()
         print(f"\tTotal real guardado en BD: {total} registros.")
 
-        datos_filtrados = gestor.mostrar_datos()
-        print(f"\tPrimeros 10 datos (con cantidad > 1000):\n\n", datos_filtrados)
+        #datos_filtrados = gestor.mostrar_datos()
+        #print(f"\tPrimeros 10 datos (con cantidad > 1000):\n\n", datos_filtrados)
 
-        gestor.exportar_a_csv(
-        datos=datos_filtrados, 
-        nombre_archivo="reporte_automatico.csv"
-        )
+        #gestor.exportar_a_csv(datos=datos_filtrados, nombre_archivo="reporte_automatico.csv")
+
+        rep24hrs = gestor.reporte_24hrs()
+        gestor.exportar_a_csv(datos=rep24hrs, nombre_archivo="24_hrs.csv")
+
+
 
 if __name__ == "__main__":
     main()
