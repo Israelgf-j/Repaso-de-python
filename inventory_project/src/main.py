@@ -5,10 +5,10 @@ from datetime import datetime
 
 
 class Imprtador_inventario:
-    def __init__(self):
+    def __init__(self, csv_name, db_name):
         self.BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-        self.RUTA_DB = os.path.join(self.BASE_DIR, '..', 'database', 'inventory.db')
-        self.RUTA_CSV = os.path.join(self.BASE_DIR, '..', 'data', 'inventory.csv')
+        self.RUTA_DB = os.path.join(self.BASE_DIR, '..', 'database', db_name)
+        self.RUTA_CSV = os.path.join(self.BASE_DIR, '..', 'data', csv_name)
         self.connection = None
         self.cursor = None
         # 🌟 CORREGIDO: Ahora es una lista para almacenar TODAS las filas
@@ -182,37 +182,57 @@ class Imprtador_inventario:
 
     def reporte_24hrs(self):
         """
-        Retorna registros filtrados por ubicaciones específicas (HO, AST, ASH, BRC, BLD)
+        Retorna registros filtrados por ubicaciones específicas (HO, AST, ASH, BRC, BLD) 
         y cuya fecha de último movimiento sea estrictamente anterior al día de hoy.
         """
-        print("\n\tEjecutando consulta de ubicaciones históricas...")
+        print("\n\tEjecutando consulta del reporte de 24 horas...")
         
         query = """
-            SELECT 
-                load_number, 
-                item_number, 
-                unit_quantity, 
-                storage_location, 
-                supplier_lot_number, 
-                lot_number, 
-                last_move_date
-                -- 🌟 NUEVA COLUMNA: Calcula los días exactos transcurridos como un número entero
-                CAST(julianday('now', 'localtime') - julianday(last_move_date) AS INTEGER) AS dias_perdido
-            FROM inventario
-            WHERE (
-                storage_location LIKE 'HO%' 
-                OR storage_location LIKE 'AST%' 
-                OR storage_location LIKE 'ASH%' 
-                OR storage_location LIKE 'BRC%' 
-                OR storage_location LIKE 'BLD%'
-            )
-            -- date(last_move_date) extrae solo 'YYYY-MM-DD' para compararlo con el día de hoy
-            AND date(last_move_date) < date('now', 'localtime')
-            ORDER BY last_move_date DESC;
+        SELECT load_number, item_number, unit_quantity, storage_location, supplier_lot_number, lot_number, last_move_date,
+        -- 🌟 CORRECCIÓN: Compara puras fechas (substrae los días reales sin importar la hora)
+        CAST(julianday(date('now', 'localtime')) - julianday(date(last_move_date)) AS INTEGER) AS dias_perdido 
+        FROM inventario 
+        WHERE ( 
+            storage_location LIKE 'HO%' OR 
+            storage_location LIKE 'AST%' OR 
+            storage_location LIKE 'ASH%' OR 
+            storage_location LIKE 'BRC%' OR 
+            storage_location LIKE 'BLD%' 
+        ) 
+        -- 🌟 FILTRO SEGURO: Asegura que solo traiga días estrictamente anteriores (Ayer o antes)
+        AND date(last_move_date) < date('now', 'localtime') 
+        ORDER BY dias_perdido DESC;
         """
         
         self.cursor.execute(query)
         return self.cursor.fetchall()
+
+
+    def reporte_capacidad(self):
+            """
+            Retorna registros filtrados por ubicaciones específicas (B10, B11, B12, B13, B14, C10, C11, C12, C13, C14, D10, D11, D12, D13, D14, HOI, BRC, BLD, A1, A2 AST, ASH, HO1, HO0)
+            """
+            print("\n\tEjecutando consulta del reporte de capacidad...")
+            
+            query = """
+            SELECT  building_id, item_number, description, unit_quantity, stocking_unit_of_measure, lot_number, inventory_status,storage_location, load_number, fifo_date
+            FROM inventario 
+            WHERE (
+                -- Simplificación para patrones como B10, B11..., C10..., D10...
+                (SUBSTR(storage_location, 1, 3) IN (
+                    'B10', 'B11', 'B12', 'B13', 'B14', 
+                    'C10', 'C11', 'C12', 'C13', 'C14', 
+                    'D10', 'D11', 'D12', 'D13', 'D14', 
+                    'HOI', 'BRC', 'BLD', 'HO1', 'HO0', 'AST', 'ASH'
+                ))
+                -- Simplificación para patrones más cortos de 2 caracteres
+                OR (SUBSTR(storage_location, 1, 2) IN ('A1', 'A2'))
+            )
+            ORDER BY storage_location DESC;
+            """
+            
+            self.cursor.execute(query)
+            return self.cursor.fetchall()
 
 
     def exportar_a_csv(self, datos, nombre_archivo):
@@ -263,7 +283,10 @@ class Imprtador_inventario:
 
 
 def main():
-    with Imprtador_inventario() as gestor:
+    nombre_csv = 'Inv 06 Oct 2026.csv'
+    nombre_db = 'Inv 06 Oct 2026.db'
+
+    with Imprtador_inventario(nombre_csv, nombre_db) as gestor:
         gestor.leer_CSV()
         print("\n\tDatos leídos del CSV (en memoria):", len(gestor.fila_transformada))
 
@@ -276,10 +299,18 @@ def main():
         #datos_filtrados = gestor.mostrar_datos()
         #print(f"\tPrimeros 10 datos (con cantidad > 1000):\n\n", datos_filtrados)
 
-        #gestor.exportar_a_csv(datos=datos_filtrados, nombre_archivo="reporte_automatico.csv")
-
         rep24hrs = gestor.reporte_24hrs()
-        gestor.exportar_a_csv(datos=rep24hrs, nombre_archivo="24_hrs.csv")
+
+        #for i in rep24hrs:
+        #    print(i)
+
+        repCapacidad = gestor.reporte_capacidad()
+        
+        #for i in repCapacidad:
+        #    print(i)
+
+        #gestor.exportar_a_csv(datos=rep24hrs, nombre_archivo="24_hrs.csv")
+        gestor.exportar_a_csv(datos=repCapacidad, nombre_archivo="Inv 06 Oct 2026.csv")
 
 
 
