@@ -4,7 +4,7 @@ import csv
 from datetime import datetime
 
 
-class Imprtador_inventario:
+class ImprtadorInventario:
     def __init__(self, csv_name, db_name):
         self.BASE_DIR = os.path.dirname(os.path.abspath(__file__))
         self.RUTA_DB = os.path.join(self.BASE_DIR, '..', 'database', db_name)
@@ -78,17 +78,16 @@ class Imprtador_inventario:
                             try:
                                 valor = float(valor)
                             except (ValueError, TypeError):
-                                valor = 0.0  # O None, según prefieras
+                                valor = None  # O None, según prefieras
         
                         elif columna_sqlite in ("fifo_date", "last_move_date", "manufactured_date", "received_date"):
-                            try:
-                                valor = self.transformar_datos(valor)
-                            except ValueError:
+                            if valor is None or str(valor).strip() == "":
                                 valor = None
-        
+                            else:
+                                valor = self.transformar_datos(str(valor))
+                            
                         fila_sqlite[columna_sqlite] = valor
                     
-                    # 🌟 CORREGIDO: Convertimos la fila en tupla y la AGREGAMOS (.append) a la lista
                     nueva_tupla = tuple(fila_sqlite[columna] for columna in mapeo_encabezados.keys())
                     self.fila_transformada.append(nueva_tupla)
                     
@@ -99,10 +98,11 @@ class Imprtador_inventario:
 
 
     def transformar_datos(self, fecha):
-        if not fecha or fecha.strip() == "":
-            return None
+        fecha_limpia = fecha.strip()
+
         # Intenta parsear el formato del CSV. Asegúrate de que coincida exactamente con tus datos
-        fecha_datetime = datetime.strptime(fecha.strip(), "%m/%d/%Y %I:%M:%S %p")
+        fecha_datetime = datetime.strptime(fecha_limpia, "%m/%d/%Y %I:%M:%S %p")
+
         return fecha_datetime.strftime("%Y-%m-%d %H:%M:%S")
 
     
@@ -280,13 +280,78 @@ class Imprtador_inventario:
             print(f"\n\tError al exportar a CSV: {e}")
 
 
+class Manejo_CSV:
+    def leer_CSV(self):
+            try:
+                mapeo_encabezados = {
+                    "building_id": "Building ID",
+                    "item_number": "Item Number",
+                    "description": "Description",
+                    "unit_quantity": "Unit Quantity",
+                    "stocking_unit_of_measure": "Stocking Unit of Measure",
+                    "lot_number": "Lot Number",
+                    "inventory_status": "Inventory Status",
+                    "storage_location": "Storage Location",
+                    "load_number": "Load Number",
+                    "fifo_date": "FIFO Date",
+                    "last_move_date": "Last Move Date",
+                    "supplier_lot_number": "Supplier Lot Number",
+                    "display_unit_quantity": "Display Unit Quantity",
+                    "area": "Area",
+                    "manufactured_date": "Manufactured Date",
+                    "received_date": "Received Date"
+                }
+                
+                print(f"\n\tAbriendo archivo CSV en: {self.RUTA_CSV}...")
+                
+                # Limpiamos la lista por si se corre el método más de una vez
+                self.fila_transformada = []
+    
+                with open(self.RUTA_CSV, 'r', encoding='utf-8-sig', newline="") as f:
+                    lector_csv = csv.DictReader(f)
+                    
+                    # 🌟 CORREGIDO: Validación inicial de columnas fuera del bucle (más eficiente)
+                    encabezados_csv = lector_csv.fieldnames
+                    columnas_faltantes = [col_csv for col_csv in mapeo_encabezados.values() if col_csv not in encabezados_csv]
+                    if columnas_faltantes:
+                        raise ValueError(f"Faltan columnas requeridas en el CSV: {columnas_faltantes}")
+    
+                    for fila in lector_csv:
+                        fila_sqlite = {}
+                        
+                        for columna_sqlite, columna_csv in mapeo_encabezados.items():
+                            valor = fila[columna_csv]
+            
+                            if columna_sqlite == "unit_quantity":
+                                try:
+                                    valor = float(valor)
+                                except (ValueError, TypeError):
+                                    valor = None  # O None, según prefieras
+            
+                            elif columna_sqlite in ("fifo_date", "last_move_date", "manufactured_date", "received_date"):
+                                if valor is None or str(valor).strip() == "":
+                                    valor = None
+                                else:
+                                    valor = self.transformar_datos(str(valor))
+                                
+                            fila_sqlite[columna_sqlite] = valor
+                        
+                        nueva_tupla = tuple(fila_sqlite[columna] for columna in mapeo_encabezados.keys())
+                        self.fila_transformada.append(nueva_tupla)
+                        
+            except FileNotFoundError:
+                print(f"\n\tError: No se encontró el archivo CSV en la ruta: {self.RUTA_CSV}")
+            except ValueError as e:
+                print(f"\n\tError de validación: {e}")
+
+
 
 
 def main():
-    nombre_csv = 'Inv 06 Oct 2026.csv'
-    nombre_db = 'Inv 06 Oct 2026.db'
+    nombre_csv = 'Inv 08 Oct 2026.csv'
+    nombre_db = 'Inv 08 Oct 2026.db'
 
-    with Imprtador_inventario(nombre_csv, nombre_db) as gestor:
+    with ImprtadorInventario(nombre_csv, nombre_db) as gestor:
         gestor.leer_CSV()
         print("\n\tDatos leídos del CSV (en memoria):", len(gestor.fila_transformada))
 
@@ -304,13 +369,13 @@ def main():
         #for i in rep24hrs:
         #    print(i)
 
-        repCapacidad = gestor.reporte_capacidad()
+        #repCapacidad = gestor.reporte_capacidad()
         
         #for i in repCapacidad:
         #    print(i)
 
-        #gestor.exportar_a_csv(datos=rep24hrs, nombre_archivo="24_hrs.csv")
-        gestor.exportar_a_csv(datos=repCapacidad, nombre_archivo="Inv 06 Oct 2026.csv")
+        gestor.exportar_a_csv(datos=rep24hrs, nombre_archivo="24_hrs.csv")
+        #gestor.exportar_a_csv(datos=repCapacidad, nombre_archivo="Inv 06 Oct 2026.csv")
 
 
 
