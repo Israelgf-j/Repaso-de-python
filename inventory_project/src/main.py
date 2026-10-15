@@ -32,8 +32,10 @@ class ImprtadorInventario:
         self.connection.close()
         print("\n\tConexión a la base de datos cerrada automáticamente.")
 
-    
-    def crear_tabla(self):
+
+    # Pregunta si estaria bien crear esta tabla de manera automatica con todos los datos o si es mejor mantener esto manual y escoger que datos crear
+    def crear_tabla_capacidad(self):
+        #_, claves_csv_bd = ManejoCSV.leer_CSV(self.RUTA_CSV) 
         self.cursor.execute("DROP TABLE IF EXISTS inventario;")
         query = """
             CREATE TABLE inventario (
@@ -54,15 +56,16 @@ class ImprtadorInventario:
             manufactured_date TEXT,
             received_date TEXT);     
         """
+        #query = f"INSERT INTO inventario ({' TEXT,\n'.join( [ v for v in claves_csv_bd.keys() ] )}) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
         self.cursor.execute(query)
         print("\n\tTabla 'inventario' creada exitosamente.")
 
 
     def insertar_datos(self):
-        fila_transformada, _ = ManejoCSV.leer_CSV(self.RUTA_CSV) # Convencion de uso de guion bajo para indicar que eso se ignora
+        fila_transformada, claves_csv_bd = ManejoCSV.leer_CSV(self.RUTA_CSV) 
 
         # 🌟 CORREGIDO: Inserción masiva usando 'executemany' para procesar la lista completa, aqui vamos a tratar de insertar dato a dato para evitar saturar la memoria cargandole todo un archivo de miles de lineas a una variable.
-        query = """
+        """query = PONER LAS 3 COMILLAS AQUI
             INSERT INTO inventario (
             building_id, 
             item_number, 
@@ -81,6 +84,8 @@ class ImprtadorInventario:
             manufactured_date, 
             received_date
         ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"""
+
+        query = f"INSERT INTO inventario ({',\n'.join(claves_csv_bd.keys())}) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
 
         if fila_transformada:
             self.cursor.executemany(query, fila_transformada)
@@ -186,11 +191,12 @@ class ManejoCSV:
         raise TypeError("Esta clase es estática y no puede ser instanciada.")
 
 
+    @staticmethod
     def transformar_datos(fecha):
-        fecha_limpia = fecha.strip()
-
-        # Intenta parsear el formato del CSV. Asegúrate de que coincida exactamente con tus datos
-        fecha_datetime = datetime.strptime(fecha_limpia, "%m/%d/%Y %I:%M:%S %p")
+        if fecha is None or not fecha.strip():
+            return None
+        
+        fecha_datetime = datetime.strptime(fecha, "%m/%d/%Y %I:%M:%S %p")
 
         return fecha_datetime.strftime("%Y-%m-%d %H:%M:%S")
 
@@ -199,25 +205,6 @@ class ManejoCSV:
     def leer_CSV(cls, RUTA_CSV):
             try:
                 fila_transformada = []
-
-                mapeo_encabezados = {
-                    "building_id": "Building ID",
-                    "item_number": "Item Number",
-                    "description": "Description",
-                    "unit_quantity": "Unit Quantity",
-                    "stocking_unit_of_measure": "Stocking Unit of Measure",
-                    "lot_number": "Lot Number",
-                    "inventory_status": "Inventory Status",
-                    "storage_location": "Storage Location",
-                    "load_number": "Load Number",
-                    "fifo_date": "FIFO Date",
-                    "last_move_date": "Last Move Date",
-                    "supplier_lot_number": "Supplier Lot Number",
-                    "display_unit_quantity": "Display Unit Quantity",
-                    "area": "Area",
-                    "manufactured_date": "Manufactured Date",
-                    "received_date": "Received Date"
-                }
                 
                 print(f"\n\tAbriendo archivo CSV en: {RUTA_CSV}...")
     
@@ -225,10 +212,8 @@ class ManejoCSV:
                     lector_csv = csv.DictReader(f)
                     
                     encabezados_csv = lector_csv.fieldnames
-                    columnas_faltantes = [col_csv for col_csv in mapeo_encabezados.values() if col_csv not in encabezados_csv]
-                    if columnas_faltantes:
-                        raise ValueError(f"Faltan columnas requeridas en el CSV: {columnas_faltantes}")
-    
+                    mapeo_encabezados = {clave.strip().lower().replace(" ", "_"): clave for clave in encabezados_csv}
+
                     for fila in lector_csv:
                         fila_sqlite = {}
                         
@@ -242,10 +227,7 @@ class ManejoCSV:
                                     valor = None  # O None, según prefieras
             
                             elif columna_sqlite in ("fifo_date", "last_move_date", "manufactured_date", "received_date"):
-                                if valor is None or str(valor).strip() == "":
-                                    valor = None
-                                else:
-                                    valor = cls.transformar_datos(str(valor))
+                                valor = cls.transformar_datos(str(valor))
                                 
                             fila_sqlite[columna_sqlite] = valor
                         
@@ -259,8 +241,10 @@ class ManejoCSV:
                         
             except FileNotFoundError:
                 print(f"\n\tError: No se encontró el archivo CSV en la ruta: {RUTA_CSV}")
+                return fila_transformada.clear()
             except ValueError as e:
                 print(f"\n\tError de validación: {e}")
+                return fila_transformada.clear()
 
 
     @staticmethod
@@ -310,12 +294,12 @@ class ManejoCSV:
 
 
 def main():
-    nombre_csv = 'Inv 12 Oct 2026.csv'
-    nombre_db = 'Inv 12 Oct 2026.db'
+    nombre_csv = 'Inv 15 Oct 2026.csv'
+    nombre_db = 'Inv 15 Oct 2026.db'
 
     with ImprtadorInventario(nombre_csv, nombre_db) as gestor:
 
-        gestor.crear_tabla()
+        gestor.crear_tabla_capacidad()
         gestor.insertar_datos()
 
         total = gestor.total_inventario()
