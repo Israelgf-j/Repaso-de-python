@@ -141,11 +141,14 @@ class ImprtadorInventario:
         CAST(julianday(date('now', 'localtime')) - julianday(date(last_move_date)) AS INTEGER) AS dias_perdido 
         FROM inventario 
         WHERE ( 
-            storage_location LIKE 'HO%' OR 
-            storage_location LIKE 'AST%' OR 
-            storage_location LIKE 'ASH%' OR 
+            storage_location LIKE 'WHKILL%' OR
+            storage_location LIKE 'HOI%' OR
             storage_location LIKE 'BRC%' OR 
-            storage_location LIKE 'BLD%' 
+            storage_location LIKE 'BLD%' OR
+            storage_location LIKE 'HO0%' OR
+            storage_location LIKE 'HO1%' OR
+            storage_location LIKE 'AST%' OR
+            storage_location LIKE 'ASH%' 
         ) 
         -- 🌟 FILTRO SEGURO: Asegura que solo traiga días estrictamente anteriores (Ayer o antes)
         AND date(last_move_date) < date('now', 'localtime') 
@@ -204,6 +207,13 @@ class ManejoCSV:
     @classmethod    # Usa este decorador o una clase estatica cuando no ocupes instanciar una clase, solo usar sus metodos pero que estos puedan acceder a sus propias propiedades (atributos o metodos)
     def leer_CSV(cls, RUTA_CSV):
             try:
+                if not os.path.exists(RUTA_CSV):
+                    raise FileNotFoundError(f"El archivo CSV no existe en la ruta: {RUTA_CSV}")
+                
+                # Validar si el archivo está vacío
+                if os.path.getsize(RUTA_CSV) == 0:
+                    raise ValueError(f"El archivo CSV está vacío: {RUTA_CSV}")
+
                 fila_transformada = []
                 
                 print(f"\n\tAbriendo archivo CSV en: {RUTA_CSV}...")
@@ -235,16 +245,15 @@ class ManejoCSV:
 
                         fila_transformada.append(nueva_tupla)
 
-                    return fila_transformada, mapeo_encabezados
+                    if not fila_transformada:
+                        raise ValueError("El archivo CSV contiene encabezados pero no tiene registros de datos.")
 
-                print("\n\tDatos leídos del CSV (en memoria):", len(fila_transformada))
+                    print("\n\tDatos leídos del CSV (en memoria):", len(fila_transformada))
+                    return fila_transformada, mapeo_encabezados
                         
-            except FileNotFoundError:
-                print(f"\n\tError: No se encontró el archivo CSV en la ruta: {RUTA_CSV}")
-                return fila_transformada.clear()
-            except ValueError as e:
-                print(f"\n\tError de validación: {e}")
-                return fila_transformada.clear()
+            except Exception as e:
+                print(f"\n\tError crítico procesando el CSV: {e}")
+                raise  # Propagamos el error para que detenga la ejecución y no guarde basura en la BD
 
 
     @staticmethod
@@ -294,8 +303,8 @@ class ManejoCSV:
 
 
 def main():
-    nombre_csv = 'Inv 15 Oct 2026.csv'
-    nombre_db = 'Inv 15 Oct 2026.db'
+    nombre_csv = 'Inv 16 Oct 2026.csv'
+    nombre_db = 'Inv 16 Oct 2026.db'
 
     with ImprtadorInventario(nombre_csv, nombre_db) as gestor:
 
