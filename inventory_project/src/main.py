@@ -298,13 +298,63 @@ class ManejoCSV:
                 
             except Exception as e:
                 print(f"\n\tError al exportar a CSV: {e}")
-    
+
+
+    @staticmethod
+    def reporte_capacidad_segmentado(datos, exportar_a):
+        """
+        Ejecuta el reporte de capacidad y segmenta los resultados en 4 archivos CSV diferentes.
+        """
+        # 1. Traemos todos los datos con tu query original
+
+        if not datos:
+            print("\n\tNo se encontraron datos para segmentar.")
+            return
+
+        # 2. Definimos los 4 grupos de prefijos basados en tus reglas
+        grupos = {
+            "B10_D14": ['B10', 'B11', 'B12', 'B13', 'B14', 'C10', 'C11', 'C12', 'C13', 'C14', 'D10', 'D11', 'D12', 'D13', 'D14'],
+            "HOI_BLD": ['HOI', 'BRC', 'BLD'],
+            "A1_A2": ['A1', 'A2'],
+            "HO1_ASH": ['HO1', 'HO0', 'AST', 'ASH']
+        }
+
+        # 3. Inicializamos contenedores vacíos para cada grupo y uno para los que no entren en ninguno
+        datos_segmentados = {key: [] for key in grupos.keys()}
+        datos_segmentados["Otros"] = []
+
+        # 4. Clasificamos cada fila (evaluando los primeros 3 y 2 caracteres)
+        for fila in datos:
+            loc = fila['storage_location'] if fila['storage_location'] else ""
+            prefijo_3 = loc[:3]
+            prefijo_2 = loc[:2]
+            
+            asignado = False
+            for nombre_grupo, prefijos in grupos.items():
+                # Verificamos si coincide el prefijo de 3 o de 2 caracteres
+                if prefijo_3 in prefijos or prefijo_2 in prefijos:
+                    datos_segmentados[nombre_grupo].append(fila)
+                    asignado = True
+                    break
+            
+            if not asignado:
+                datos_segmentados["Otros"].append(fila)
+
+        # 5. Exportamos cada grupo usando tu método estático actual
+        for nombre_grupo, filas_grupo in datos_segmentados.items():
+            if filas_grupo: # Solo exporta si el grupo tiene registros
+                nombre_archivo = f"reporte_capacidad_{nombre_grupo}.csv"
+                # Llamamos a tu método tal y como está
+                ManejoCSV.exportar_a_csv(filas_grupo, nombre_archivo, exportar_a)
+
+
+
 
 
 
 def main():
-    nombre_csv = 'Inv 16 Oct 2026.csv'
-    nombre_db = 'Inv 16 Oct 2026.db'
+    nombre_csv = 'Inv 21 Oct 2026.csv'
+    nombre_db = 'Inv 21 Oct 2026.db'
 
     with ImprtadorInventario(nombre_csv, nombre_db) as gestor:
 
@@ -317,19 +367,19 @@ def main():
         #datos_filtrados = gestor.mostrar_datos()
         #print(f"\tPrimeros 10 datos (con cantidad > 1000):\n\n", datos_filtrados)
 
-        rep24hrs = gestor.reporte_24hrs()
-        gestor.imprimir_datos(rep24hrs)
+        #rep24hrs = gestor.reporte_24hrs()
+        #gestor.imprimir_datos(rep24hrs)
 
         # ------------- Ya realizamos la separacion del codigo en una clase mas, esta se encarga del manejo de todo lo que tiene que ver con CSV, ahora falta exportar de manera correcta los datos debido a que se cambio la manera en que se presentan las consultas del CSV, osea, el fetchall() ya no nos arroja una lista de tuplas, ahora se comporta como una lista de diccionarios, el desempaquetamiento debe ser acorde a esto. 
         # LISTO: ya no la complicamos tratando de hacer un metodo que exporte este nuevo tipo de dato complejo, simplemente convertimos ese tipo de dato complejo a una tupla sencilla y la insertamos de manera ordinaria
         
-        #repCapacidad = gestor.reporte_capacidad()
+        repCapacidad = gestor.reporte_capacidad()
         #gestor.imprimir_datos(repCapacidad)
         print()
         
 
-        ManejoCSV.exportar_a_csv(datos=rep24hrs, nombre_archivo="24_hrs.csv", exportar_a=gestor.BASE_DIR)
-        #ManejoCSV.exportar_a_csv(datos=repCapacidad, nombre_archivo="Inventario_General.csv", exportar_a=gestor.BASE_DIR)
+        #ManejoCSV.exportar_a_csv(datos=rep24hrs, nombre_archivo="24_hrs.csv", exportar_a=gestor.BASE_DIR)
+        #ManejoCSV.reporte_capacidad_segmentado(repCapacidad, exportar_a=gestor.BASE_DIR)
 
 
 
