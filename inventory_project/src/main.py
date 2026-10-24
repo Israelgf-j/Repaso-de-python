@@ -1,8 +1,15 @@
 import sqlite3
 import os
+import sys
 import csv
 from datetime import datetime
 
+# Sube un nivel desde 'src/' para encontrar la raíz del proyecto
+ruta_raiz = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.append(ruta_raiz)
+
+from settings.Capacidad import mapeo_capacidad
+from settings.Productividad import mapeo_productividad
 
 class ImprtadorInventario:
     def __init__(self, csv_name, db_name):
@@ -35,7 +42,7 @@ class ImprtadorInventario:
 
     # Pregunta si estaria bien crear esta tabla de manera automatica con todos los datos o si es mejor mantener esto manual y escoger que datos crear
     def crear_tabla_capacidad(self):
-        #_, claves_csv_bd = ManejoCSV.leer_CSV(self.RUTA_CSV) 
+        #_, claves_csv_bd = ManejoCSV.leer_CSV(self.RUTA_CSV
         self.cursor.execute("DROP TABLE IF EXISTS inventario;")
         query = """
             CREATE TABLE inventario (
@@ -61,29 +68,30 @@ class ImprtadorInventario:
         print("\n\tTabla 'inventario' creada exitosamente.")
 
 
-    def insertar_datos(self):
-        fila_transformada, claves_csv_bd = ManejoCSV.leer_CSV(self.RUTA_CSV) 
+    def crear_tabla_productividad(self):
+        #_, claves_csv_bd = ManejoCSV.leer_CSV(self.RUTA_CSV
+        self.cursor.execute("DROP TABLE IF EXISTS inventario_productividad;")
+        query = """
+            CREATE TABLE inventario_productividad (
+            from_location TEXT,
+            to_location TEXT,
+            activity_code TEXT,
+            operation_code REAL,
+            user_id TEXT,
+            item_number TEXT,
+            last_updated_date TEXT,
+            quantity TEXT,
+            load_number TEXT,
+            lot_number TEXT,
+            supplier_lot_number TEXT);
+            """
+        
+        self.cursor.execute(query)
+        print("\n\tTabla 'inventario_productividad' creada exitosamente.")
 
-        # 🌟 CORREGIDO: Inserción masiva usando 'executemany' para procesar la lista completa, aqui vamos a tratar de insertar dato a dato para evitar saturar la memoria cargandole todo un archivo de miles de lineas a una variable.
-        """query = PONER LAS 3 COMILLAS AQUI
-            INSERT INTO inventario (
-            building_id, 
-            item_number, 
-            description, 
-            unit_quantity, 
-            stocking_unit_of_measure,
-            lot_number, 
-            inventory_status, 
-            storage_location, 
-            load_number, 
-            fifo_date,
-            last_move_date, 
-            supplier_lot_number, 
-            display_unit_quantity, 
-            area,
-            manufactured_date, 
-            received_date
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"""
+
+    def insertar_datos_capacidad(self):
+        fila_transformada, claves_csv_bd = ManejoCSV.leer_CSV(self.RUTA_CSV, mapeo_capacidad)
 
         query = f"INSERT INTO inventario ({',\n'.join(claves_csv_bd.keys())}) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
 
@@ -91,6 +99,18 @@ class ImprtadorInventario:
             self.cursor.executemany(query, fila_transformada)
             print(f"\n\t¡Éxito! Se han importado correctamente {len(fila_transformada)} filas al inventario.\n")
         else:
+            print("\n\tAdvertencia: No hay datos para insertar.")
+
+
+    def insertar_datos_productividad(self):
+        fila_transformada, claves_csv_bd = ManejoCSV.leer_CSV(self.RUTA_CSV, mapeo_productividad)
+
+        query = f"INSERT INTO inventario_productividad({',\n'.join(claves_csv_bd.keys())}) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+
+        if fila_transformada:
+            self.cursor.executemany(query, fila_transformada)
+            print(f"\n\t¡Éxito! Se han importado correctamente {len(fila_transformada)} filas al inventario_productividad.\n")
+        else:           
             print("\n\tAdvertencia: No hay datos para insertar.")
 
 
@@ -205,7 +225,7 @@ class ManejoCSV:
 
 
     @classmethod    # Usa este decorador o una clase estatica cuando no ocupes instanciar una clase, solo usar sus metodos pero que estos puedan acceder a sus propias propiedades (atributos o metodos)
-    def leer_CSV(cls, RUTA_CSV):
+    def leer_CSV(cls, RUTA_CSV, mapeo_encabezados=None):
             try:
                 if not os.path.exists(RUTA_CSV):
                     raise FileNotFoundError(f"El archivo CSV no existe en la ruta: {RUTA_CSV}")
@@ -221,8 +241,9 @@ class ManejoCSV:
                 with open(RUTA_CSV, 'r', encoding='utf-8-sig', newline="") as f:
                     lector_csv = csv.DictReader(f)
                     
-                    encabezados_csv = lector_csv.fieldnames
-                    mapeo_encabezados = {clave.strip().lower().replace(" ", "_"): clave for clave in encabezados_csv}
+                    #encabezados_csv = lector_csv.fieldnames
+                    #mapeo_encabezados = {clave.strip().lower().replace(" ", "_"): clave for clave in encabezados_csv}
+                    print("\n\tEncabezados:", mapeo_encabezados)
 
                     for fila in lector_csv:
                         fila_sqlite = {}
@@ -237,7 +258,7 @@ class ManejoCSV:
                                     valor = None  # O None, según prefieras
             
                             elif columna_sqlite in ("fifo_date", "last_move_date", "manufactured_date", "received_date"):
-                                valor = cls.transformar_datos(str(valor))
+                                valor = cls.transformar_datos(valor)
                                 
                             fila_sqlite[columna_sqlite] = valor
                         
@@ -353,14 +374,19 @@ class ManejoCSV:
 
 
 def main():
-    nombre_csv = 'Inv 21 Oct 2026.csv'
-    nombre_db = 'Inv 21 Oct 2026.db'
+    nombre_csv_capacidad = 'Inv 24 Oct 2026.csv'
+    nombre_csv_productividad = 'Productividad.csv'
+    nombre_db = 'Inv 24 Oct 2026.db'
+    nombre_db_productividad = 'Productividad.db'
 
-    with ImprtadorInventario(nombre_csv, nombre_db) as gestor:
+    with ImprtadorInventario(nombre_csv_productividad, nombre_db_productividad) as gestor:
 
-        gestor.crear_tabla_capacidad()
-        gestor.insertar_datos()
+        #gestor.crear_tabla_capacidad()
+        #gestor.insertar_datos_capacidad()
 
+        gestor.crear_tabla_productividad()
+        gestor.insertar_datos_productividad()
+        
         total = gestor.total_inventario()
         print(f"\tTotal real guardado en BD: {total} registros.")
 
@@ -370,13 +396,11 @@ def main():
         #rep24hrs = gestor.reporte_24hrs()
         #gestor.imprimir_datos(rep24hrs)
 
-        # ------------- Ya realizamos la separacion del codigo en una clase mas, esta se encarga del manejo de todo lo que tiene que ver con CSV, ahora falta exportar de manera correcta los datos debido a que se cambio la manera en que se presentan las consultas del CSV, osea, el fetchall() ya no nos arroja una lista de tuplas, ahora se comporta como una lista de diccionarios, el desempaquetamiento debe ser acorde a esto. 
-        # LISTO: ya no la complicamos tratando de hacer un metodo que exporte este nuevo tipo de dato complejo, simplemente convertimos ese tipo de dato complejo a una tupla sencilla y la insertamos de manera ordinaria
         
-        repCapacidad = gestor.reporte_capacidad()
+        #repCapacidad = gestor.reporte_capacidad()
         #gestor.imprimir_datos(repCapacidad)
         print()
-        
+
 
         #ManejoCSV.exportar_a_csv(datos=rep24hrs, nombre_archivo="24_hrs.csv", exportar_a=gestor.BASE_DIR)
         #ManejoCSV.reporte_capacidad_segmentado(repCapacidad, exportar_a=gestor.BASE_DIR)
