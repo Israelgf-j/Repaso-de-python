@@ -3,13 +3,15 @@ import os
 import sys
 import csv
 from datetime import datetime
+from src.queries.consultas import *
 
 # Sube un nivel desde 'src/' para encontrar la raíz del proyecto
 ruta_raiz = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.append(ruta_raiz)
 
-from settings.Capacidad import mapeo_capacidad
-from settings.Productividad import mapeo_productividad
+from src.settings.Capacidad import mapeo_capacidad
+from src.settings.Productividad import mapeo_productividad
+
 
 class ImprtadorInventario:
     def __init__(self, csv_name, db_name):
@@ -43,7 +45,7 @@ class ImprtadorInventario:
     # Pregunta si estaria bien crear esta tabla de manera automatica con todos los datos o si es mejor mantener esto manual y escoger que datos crear
     def crear_tabla_capacidad(self):
         #_, claves_csv_bd = ManejoCSV.leer_CSV(self.RUTA_CSV
-        self.cursor.execute("DROP TABLE IF EXISTS inventario;")
+        self.cursor.execute("DROP TABLE IF EXISTS inventario_capacidad;")
         query = """
             CREATE TABLE inventario_capacidad (
             building_id TEXT,
@@ -113,98 +115,18 @@ class ImprtadorInventario:
             print("\n\tAdvertencia: No hay datos para insertar.")
 
 
-    def total_inventario(self, tabla):
-        query = f"SELECT COUNT(*) FROM {tabla}"
-        self.cursor.execute(query)
-        # 🌟 OPTIMIZACIÓN: Retornamos directamente el entero en lugar de la estructura completa
-        return self.cursor.fetchone()[0]
-
-
     def imprimir_datos(self, consulta):
         if consulta: # Verificamos que la consulta no este vacia
             # 1. Extraemos los encabezados de la primera fila.
             encabezados = consulta[0].keys()
             print(" | ".join(encabezados))      # Imprime : id | item | qty
-            print("-" * 30)
+            print("-" * 60)
 
             # 2. Iteramos el resto de las filas de forma limpia
-            for row in consulta:
+            for row in consulta[:10]:
                 # Creamos una lista con los valores ordenados en cada columna
                 valores = [str(row[col]) for col in encabezados]
                 print(" | ".join(valores))
-                
-
-    def mostrar_datos(self, tabla):
-        query = f"""
-            SELECT load_number, item_number, unit_quantity, stocking_unit_of_measure, last_move_date
-            FROM {tabla}
-            WHERE unit_quantity > 1000
-            ORDER BY last_move_date
-            LIMIT 10
-            """
-        self.cursor.execute(query)
-        datos = self.cursor.fetchall()
-        return datos
-
-
-    def reporte_24hrs(self):
-        """
-        Retorna registros filtrados por ubicaciones específicas (HO, AST, ASH, BRC, BLD) 
-        y cuya fecha de último movimiento sea estrictamente anterior al día de hoy.
-        """
-        print("\n\tEjecutando consulta del reporte de 24 horas...")
-        
-        query = """
-        SELECT load_number, item_number, unit_quantity, storage_location, supplier_lot_number, lot_number, last_move_date,
-        -- 🌟 CORRECCIÓN: Compara puras fechas (substrae los días reales sin importar la hora)
-        CAST(julianday(date('now', 'localtime')) - julianday(date(last_move_date)) AS INTEGER) AS dias_perdido 
-        FROM inventario 
-        WHERE ( 
-            storage_location LIKE 'WHKILL%' OR
-            storage_location LIKE 'HOI%' OR
-            storage_location LIKE 'BRC%' OR 
-            storage_location LIKE 'BLD%' OR
-            storage_location LIKE 'HO0%' OR
-            storage_location LIKE 'HO1%' OR
-            storage_location LIKE 'AST%' OR
-            storage_location LIKE 'ASH%' 
-        ) 
-        -- 🌟 FILTRO SEGURO: Asegura que solo traiga días estrictamente anteriores (Ayer o antes)
-        AND date(last_move_date) < date('now', 'localtime') 
-        ORDER BY dias_perdido DESC;
-        """
-        
-        self.cursor.execute(query)
-        return self.cursor.fetchall()
-
-
-    def reporte_capacidad(self):
-            """
-            Retorna registros filtrados por ubicaciones específicas (B10, B11, B12, B13, B14, C10, C11, C12, C13, C14, D10, D11, D12, D13, D14, HOI, BRC, BLD, A1, A2 AST, ASH, HO1, HO0)
-            """
-            print("\n\tEjecutando consulta del reporte de capacidad...")
-            
-            query = """
-            SELECT  building_id, item_number, description, unit_quantity, stocking_unit_of_measure, lot_number, inventory_status,storage_location, load_number, fifo_date
-            FROM inventario 
-            WHERE (
-                -- Simplificación para patrones como B10, B11..., C10..., D10...
-                (SUBSTR(storage_location, 1, 3) IN (
-                    'B10', 'B11', 'B12', 'B13', 'B14', 
-                    'C10', 'C11', 'C12', 'C13', 'C14', 
-                    'D10', 'D11', 'D12', 'D13', 'D14', 
-                    'HOI', 'BRC', 'BLD', 'HO1', 'HO0', 'AST', 'ASH'
-                ))
-                -- Simplificación para patrones más cortos de 2 caracteres
-                OR (SUBSTR(storage_location, 1, 2) IN ('A1', 'A2'))
-            );
-            -- ORDER BY storage_location DESC;
-            """
-
-            self.cursor.execute(query)
-            return self.cursor.fetchall()
-
-
     
 
 class ManejoCSV:
@@ -382,10 +304,10 @@ class ManejoCSV:
 def main():
     nombre_csv_capacidad = 'Inv 24 Oct 2026.csv'
     nombre_csv_productividad = 'Productividad.csv'
-    nombre_db = 'Inv 24 Oct 2026.db'
+    nombre_db_capacidad = 'Inv 24 Oct 2026.db'
     nombre_db_productividad = 'Productividad.db'
 
-    with ImprtadorInventario(nombre_csv_capacidad, nombre_db) as gestor:
+    with ImprtadorInventario(nombre_csv_capacidad, nombre_db_capacidad) as gestor:
 
         gestor.crear_tabla_capacidad()
         gestor.insertar_datos_capacidad()
@@ -393,29 +315,39 @@ def main():
         tabla_productividad = "inventario_productividad"
         tabla_capacidad = "inventario_capacidad"
 
-        total = gestor.total_inventario(tabla_capacidad)
-        print(f"\tTotal real guardado en BD CAPACIDAD: {total} registros.")
+    
+        #total = total_inventario(gestor.cursor, tabla_capacidad)
+        #print(f"\t---------- Total real guardado en BD CAPACIDAD: {total} registros.")
 
-        #datos_filtrados = gestor.mostrar_datos(tabla_capacidad)
-        #print(f"\tPrimeros 10 datos (con cantidad > 1000):\n\n", datos_filtrados)
+        
+        #datos_filtrados = mostrar_datos_tabla(gestor.cursor, tabla_capacidad)
+        #print("\tPrimeros 10 datos de la consulta SQlite:\n\n")
+        #gestor.imprimir_datos(datos_filtrados)
 
-        #rep24hrs = gestor.reporte_24hrs()
+
+
+        #    ----------------- Reporte de 24 horas -----------------
+        #rep24hrs = reporte_24hrs(gestor.cursor, tabla_capacidad)
         #gestor.imprimir_datos(rep24hrs)
 
 
+        #    ----------------- Reporte de capacidad de almacen -----------------
+        repCapacidad = reporte_capacidad(gestor.cursor, tabla_capacidad)
+        gestor.imprimir_datos(repCapacidad)
+        print()
+
+
+        #ManejoCSV.exportar_a_csv(datos=rep24hrs, nombre_archivo="24_hrs.csv", exportar_a=gestor.BASE_DIR)
+        #ManejoCSV.reporte_capacidad_segmentado(repCapacidad, exportar_a=gestor.BASE_DIR)
+
+        
         #gestor.crear_tabla_productividad()
         #gestor.insertar_datos_productividad()
 
         #total = gestor.total_inventario(tabla_productividad)
         #print(f"\tTotal real guardado en BD PRODUCTIVIDAD: {total} registros.")
         
-        #repCapacidad = gestor.reporte_capacidad()
-        #gestor.imprimir_datos(repCapacidad)
-        print()
 
-
-        #ManejoCSV.exportar_a_csv(datos=rep24hrs, nombre_archivo="24_hrs.csv", exportar_a=gestor.BASE_DIR)
-        #ManejoCSV.reporte_capacidad_segmentado(repCapacidad, exportar_a=gestor.BASE_DIR)
 
 
 
