@@ -45,7 +45,7 @@ class ImprtadorInventario:
         #_, claves_csv_bd = ManejoCSV.leer_CSV(self.RUTA_CSV
         self.cursor.execute("DROP TABLE IF EXISTS inventario;")
         query = """
-            CREATE TABLE inventario (
+            CREATE TABLE inventario_capacidad (
             building_id TEXT,
             item_number TEXT,
             description TEXT,
@@ -65,22 +65,21 @@ class ImprtadorInventario:
         """
         #query = f"INSERT INTO inventario ({' TEXT,\n'.join( [ v for v in claves_csv_bd.keys() ] )}) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
         self.cursor.execute(query)
-        print("\n\tTabla 'inventario' creada exitosamente.")
+        print("\n\tTabla 'inventario_capacidad' creada exitosamente.")
 
 
     def crear_tabla_productividad(self):
-        #_, claves_csv_bd = ManejoCSV.leer_CSV(self.RUTA_CSV
         self.cursor.execute("DROP TABLE IF EXISTS inventario_productividad;")
         query = """
             CREATE TABLE inventario_productividad (
             from_location TEXT,
             to_location TEXT,
             activity_code TEXT,
-            operation_code REAL,
+            operation_code TEXT,
             user_id TEXT,
             item_number TEXT,
             last_updated_date TEXT,
-            quantity TEXT,
+            quantity REAL,
             load_number TEXT,
             lot_number TEXT,
             supplier_lot_number TEXT);
@@ -93,7 +92,7 @@ class ImprtadorInventario:
     def insertar_datos_capacidad(self):
         fila_transformada, claves_csv_bd = ManejoCSV.leer_CSV(self.RUTA_CSV, mapeo_capacidad)
 
-        query = f"INSERT INTO inventario ({',\n'.join(claves_csv_bd.keys())}) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+        query = f"INSERT INTO inventario_capacidad ({',\n'.join(claves_csv_bd.keys())}) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
 
         if fila_transformada:
             self.cursor.executemany(query, fila_transformada)
@@ -105,7 +104,7 @@ class ImprtadorInventario:
     def insertar_datos_productividad(self):
         fila_transformada, claves_csv_bd = ManejoCSV.leer_CSV(self.RUTA_CSV, mapeo_productividad)
 
-        query = f"INSERT INTO inventario_productividad({',\n'.join(claves_csv_bd.keys())}) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+        query = f"INSERT INTO inventario_productividad({',\n'.join(claves_csv_bd.keys())}) VALUES (?,?,?,?,?,?,?,?,?,?,?)"
 
         if fila_transformada:
             self.cursor.executemany(query, fila_transformada)
@@ -114,8 +113,8 @@ class ImprtadorInventario:
             print("\n\tAdvertencia: No hay datos para insertar.")
 
 
-    def total_inventario(self):
-        query = "SELECT COUNT(*) FROM inventario"
+    def total_inventario(self, tabla):
+        query = f"SELECT COUNT(*) FROM {tabla}"
         self.cursor.execute(query)
         # 🌟 OPTIMIZACIÓN: Retornamos directamente el entero en lugar de la estructura completa
         return self.cursor.fetchone()[0]
@@ -135,10 +134,10 @@ class ImprtadorInventario:
                 print(" | ".join(valores))
                 
 
-    def mostrar_datos(self):
-        query = """
+    def mostrar_datos(self, tabla):
+        query = f"""
             SELECT load_number, item_number, unit_quantity, stocking_unit_of_measure, last_move_date
-            FROM inventario
+            FROM {tabla}
             WHERE unit_quantity > 1000
             ORDER BY last_move_date
             LIMIT 10
@@ -247,6 +246,13 @@ class ManejoCSV:
 
                     for fila in lector_csv:
                         fila_sqlite = {}
+
+                        encabezados_csv = lector_csv.fieldnames or []
+
+                        columnas_faltantes = [columna_csv for columna_csv in mapeo_encabezados.values() if columna_csv not in encabezados_csv]
+
+                        if columnas_faltantes:
+                            raise ValueError(f"Faltan encabezados requeridos: {columnas_faltantes}")
                         
                         for columna_sqlite, columna_csv in mapeo_encabezados.items():
                             valor = fila[columna_csv]
@@ -379,23 +385,29 @@ def main():
     nombre_db = 'Inv 24 Oct 2026.db'
     nombre_db_productividad = 'Productividad.db'
 
-    with ImprtadorInventario(nombre_csv_productividad, nombre_db_productividad) as gestor:
+    with ImprtadorInventario(nombre_csv_capacidad, nombre_db) as gestor:
 
-        #gestor.crear_tabla_capacidad()
-        #gestor.insertar_datos_capacidad()
+        gestor.crear_tabla_capacidad()
+        gestor.insertar_datos_capacidad()
 
-        gestor.crear_tabla_productividad()
-        gestor.insertar_datos_productividad()
-        
-        total = gestor.total_inventario()
-        print(f"\tTotal real guardado en BD: {total} registros.")
+        tabla_productividad = "inventario_productividad"
+        tabla_capacidad = "inventario_capacidad"
 
-        #datos_filtrados = gestor.mostrar_datos()
+        total = gestor.total_inventario(tabla_capacidad)
+        print(f"\tTotal real guardado en BD CAPACIDAD: {total} registros.")
+
+        #datos_filtrados = gestor.mostrar_datos(tabla_capacidad)
         #print(f"\tPrimeros 10 datos (con cantidad > 1000):\n\n", datos_filtrados)
 
         #rep24hrs = gestor.reporte_24hrs()
         #gestor.imprimir_datos(rep24hrs)
 
+
+        #gestor.crear_tabla_productividad()
+        #gestor.insertar_datos_productividad()
+
+        #total = gestor.total_inventario(tabla_productividad)
+        #print(f"\tTotal real guardado en BD PRODUCTIVIDAD: {total} registros.")
         
         #repCapacidad = gestor.reporte_capacidad()
         #gestor.imprimir_datos(repCapacidad)
