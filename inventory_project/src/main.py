@@ -3,6 +3,7 @@ import os
 import sys
 from src.queries.consultas import *
 from src.services.ManejoCsv import ManejoCSV
+from src.services.Importador import crear_tabla_capacidad, crear_tabla_productividad
 
 # Sube un nivel desde 'src/' para encontrar la raíz del proyecto
 ruta_raiz = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -39,55 +40,6 @@ class ImprtadorInventario:
         self.cursor.close()
         self.connection.close()
         print("\n\tConexión a la base de datos cerrada automáticamente.")
-
-
-    # Pregunta si estaria bien crear esta tabla de manera automatica con todos los datos o si es mejor mantener esto manual y escoger que datos crear
-    def crear_tabla_capacidad(self):
-        #_, claves_csv_bd = ManejoCSV.leer_CSV(self.RUTA_CSV
-        self.cursor.execute("DROP TABLE IF EXISTS inventario_capacidad;")
-        query = """
-            CREATE TABLE inventario_capacidad (
-            building_id TEXT,
-            item_number TEXT,
-            description TEXT,
-            unit_quantity REAL,
-            stocking_unit_of_measure TEXT,
-            lot_number TEXT,
-            inventory_status TEXT,
-            storage_location TEXT,
-            load_number TEXT,
-            fifo_date TEXT,
-            last_move_date TEXT,
-            supplier_lot_number TEXT,
-            display_unit_quantity TEXT,
-            area TEXT,
-            manufactured_date TEXT,
-            received_date TEXT);     
-        """
-        #query = f"INSERT INTO inventario ({' TEXT,\n'.join( [ v for v in claves_csv_bd.keys() ] )}) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
-        self.cursor.execute(query)
-        print("\n\tTabla 'inventario_capacidad' creada exitosamente.")
-
-
-    def crear_tabla_productividad(self):
-        self.cursor.execute("DROP TABLE IF EXISTS inventario_productividad;")
-        query = """
-            CREATE TABLE inventario_productividad (
-            from_location TEXT,
-            to_location TEXT,
-            activity_code TEXT,
-            operation_code TEXT,
-            user_id TEXT,
-            item_number TEXT,
-            last_updated_date TEXT,
-            quantity REAL,
-            load_number TEXT,
-            lot_number TEXT,
-            supplier_lot_number TEXT);
-            """
-        
-        self.cursor.execute(query)
-        print("\n\tTabla 'inventario_productividad' creada exitosamente.")
 
 
     def insertar_datos_capacidad(self):
@@ -134,15 +86,15 @@ def main():
     nombre_db_capacidad = 'Inv 24 Oct 2026.db'
     nombre_db_productividad = 'Productividad.db'
 
-    with ImprtadorInventario(nombre_csv_capacidad, nombre_db_capacidad) as gestor:
+    with ImprtadorInventario(nombre_csv_productividad, nombre_db_productividad) as gestor:
 
-        gestor.crear_tabla_capacidad()
-        gestor.insertar_datos_capacidad()
+        # ----------------------------------------- Trabajo de Capacidad del ALMACEN -----------------------------------------
 
-        tabla_productividad = "inventario_productividad"
+        #crear_tabla_capacidad(gestor.cursor)
+        #gestor.insertar_datos_capacidad()
+
         tabla_capacidad = "inventario_capacidad"
 
-    
         #total = total_inventario(gestor.cursor, tabla_capacidad)
         #print(f"\t---------- Total real guardado en BD CAPACIDAD: {total} registros.")
 
@@ -167,12 +119,16 @@ def main():
         #ManejoCSV.exportar_a_csv(datos=rep24hrs, nombre_archivo="24_hrs.csv", exportar_a=gestor.BASE_DIR)
         #ManejoCSV.reporte_capacidad_segmentado(repCapacidad, exportar_a=gestor.BASE_DIR)
 
-        
-        #gestor.crear_tabla_productividad()
-        #gestor.insertar_datos_productividad()
 
-        #total = gestor.total_inventario(tabla_productividad)
-        #print(f"\tTotal real guardado en BD PRODUCTIVIDAD: {total} registros.")
+        # ----------------------------------------- Trabajo de Productividad -----------------------------------------
+
+        tabla_productividad = "inventario_productividad"
+        
+        crear_tabla_productividad(gestor.cursor)
+        gestor.insertar_datos_productividad()
+
+        total = total_inventario(gestor.cursor, tabla_productividad)
+        print(f"\tTotal real guardado en BD PRODUCTIVIDAD: {total} registros.")
         
 
 
