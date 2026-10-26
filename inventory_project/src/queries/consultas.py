@@ -26,7 +26,8 @@ def reporte_24hrs(cursor, tabla):
     Retorna registros filtrados por ubicaciones específicas (HO, AST, ASH, BRC, BLD) 
     y cuya fecha de último movimiento sea estrictamente anterior al día de hoy.
     """
-    print("-" * 10, "\n\tEjecutando consulta del reporte de 24 horas...")
+    print()
+    print("-" * 20, "Ejecutando consulta del reporte de 24 horas...\n")
     
     query = f"""
     SELECT load_number, item_number, unit_quantity, storage_location, supplier_lot_number, lot_number, last_move_date,
