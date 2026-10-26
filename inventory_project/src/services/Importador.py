@@ -1,3 +1,10 @@
+import os
+from src.config import DIR_DATA
+from src.settings.Capacidad import mapeo_capacidad
+from src.settings.Productividad import mapeo_productividad
+from src.services.ManejoCsv import ManejoCSV
+
+
 def crear_tabla_capacidad(cursor):
 
     #_, claves_csv_bd = ManejoCSV.leer_CSV(self.RUTA_CSV
@@ -50,3 +57,34 @@ def crear_tabla_productividad(cursor):
     
     return cursor.execute(query)
 
+
+def insertar_datos_capacidad(cursor, csv_name):
+    # Construimos la ruta usando la configuración centralizada
+    RUTA_CSV = os.path.join(DIR_DATA, csv_name)
+
+    fila_transformada, claves_csv_bd = ManejoCSV.leer_CSV(RUTA_CSV, mapeo_capacidad)
+
+    query = f"INSERT INTO inventario_capacidad ({',\n'.join(claves_csv_bd.keys())}) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+
+    if fila_transformada:
+        cursor.executemany(query, fila_transformada)
+        print(f"\n\t¡Éxito! Se han importado correctamente {len(fila_transformada)} filas al inventario.\n")
+    else:
+        print("\n\tAdvertencia: No hay datos para insertar.")
+
+
+def insertar_datos_productividad(cursor, csv_name):
+
+    # Construimos la ruta usando la configuración centralizada
+    RUTA_CSV = os.path.join(DIR_DATA, csv_name)
+
+    fila_transformada, claves_csv_bd = ManejoCSV.leer_CSV(RUTA_CSV, mapeo_productividad)
+
+    query = f"INSERT INTO inventario_productividad({',\n'.join(claves_csv_bd.keys())}) VALUES (?,?,?,?,?,?,?,?,?,?,?)"
+
+    if fila_transformada:
+        cursor.executemany(query, fila_transformada)
+        print(f"\n\t¡Éxito! Se han importado correctamente {len(fila_transformada)} filas al inventario_productividad.\n")
+    else:           
+        print("\n\tAdvertencia: No hay datos para insertar.")
+        
