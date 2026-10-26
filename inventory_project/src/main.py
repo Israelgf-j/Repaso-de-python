@@ -4,7 +4,7 @@ import sys
 from src.queries.consultas import *
 from src.services.ManejoCsv import ManejoCSV
 from src.services.Importador import *
-from src.config import DIR_DATABASE
+from src.config import DIR_DATABASE, DIR_DATA
 
 # Sube un nivel desde 'src/' para encontrar la raíz del proyecto
 ruta_raiz = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -55,9 +55,9 @@ class ImprtadorInventario:
 
 
 def main():
-    nombre_csv_capacidad = 'Inv 24 Oct 2026.csv'
+    nombre_csv_capacidad = 'Inv 26 Oct 2026.csv'
     nombre_csv_productividad = 'Productividad.csv'
-    nombre_db_capacidad = 'Inv 24 Oct 2026.db'
+    nombre_db_capacidad = 'Inv 26 Oct 2026.db'
     nombre_db_productividad = 'Productividad.db'
 
     with ImprtadorInventario(nombre_db_productividad) as gestor:
@@ -81,8 +81,8 @@ def main():
 
 
         #    ----------------- Reporte de 24 horas -----------------
-        #rep24hrs = reporte_24hrs(gestor.cursor, tabla_capacidad)
-        #gestor.imprimir_datos(rep24hrs)
+        rep24hrs = reporte_24hrs(gestor.cursor, tabla_capacidad)
+        gestor.imprimir_datos(rep24hrs)
 
 
         #    ----------------- Reporte de capacidad de almacen -----------------
@@ -90,16 +90,16 @@ def main():
         #gestor.imprimir_datos(repCapacidad)
 
 
-        #ManejoCSV.exportar_a_csv(datos=rep24hrs, nombre_archivo="24_hrs.csv", exportar_a=gestor.BASE_DIR)
-        #ManejoCSV.reporte_capacidad_segmentado(repCapacidad, exportar_a=gestor.BASE_DIR)
+        ManejoCSV.exportar_a_csv(datos=rep24hrs, nombre_archivo="24_hrs.csv", exportar_a=DIR_DATA)
+        #ManejoCSV.reporte_capacidad_segmentado(repCapacidad, exportar_a=DIR_DATA)
 
 
         # ----------------------------------------- Trabajo de Productividad -----------------------------------------
 
         tabla_productividad = "inventario_productividad"
         
-        #crear_tabla_productividad(gestor.cursor)
-        #gestor.insertar_datos_productividad()
+        #crear_tabla_capacidad(gestor.cursor)
+        #insertar_datos_capacidad(gestor.cursor, nombre_csv_productividad)
 
         #total = total_inventario(gestor.cursor, tabla_productividad)
         #print(f"\tTotal real guardado en BD PRODUCTIVIDAD: {total} registros.")
