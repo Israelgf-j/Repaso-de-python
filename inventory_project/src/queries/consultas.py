@@ -12,8 +12,8 @@ def mostrar_datos_tabla(cursor, tabla):
         query = f"""
             SELECT *
             FROM {tabla}
-            ORDER BY last_move_date
-            LIMIT 10
+            ORDER BY last_Updated_date
+            --LIMIT 10
             """
         
         cursor.execute(query)
