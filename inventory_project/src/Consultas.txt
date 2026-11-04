@@ -1,0 +1,204 @@
+Objetivo
+
+Ayúdame a crear y simplificar dos funciones en Python: resumen_productividad_por_usuario(datos) y mostrar_reporte_en_pantalla(lista_reporte).
+
+El programa recibe registros provenientes de una consulta SQLite3. Los datos ya están ordenados cronológicamente por fecha y hora, aunque se debe verificar si el orden es ascendente o descendente antes de implementar la lógica.
+
+El objetivo es generar un reporte de productividad logística que cuente movimientos reales de pallets (load_number), clasifique los movimientos por tipo y presente un detalle útil de los traslados entre zonas, sin generar listas innecesariamente grandes cuando se presenten los datos en pantalla.
+
+No escribas código hasta haber explicado y validado la lógica de clasificación.
+
+1. Identificación de movimientos reales
+
+Una misma load_number puede aparecer en varias filas consecutivas porque un pallet puede pasar por distintas ubicaciones durante un solo traslado.
+
+Aplicar estas reglas:
+
+Una secuencia continua de filas con la misma load_number representa un único movimiento productivo.
+Cuando cambia la load_number, el movimiento anterior termina y comienza uno nuevo.
+Si una load_number vuelve a aparecer después de que otra carga interrumpió su secuencia, debe contarse como un movimiento nuevo.
+Para cada secuencia, identificar la primera ubicación de origen (from_location) y la última ubicación de destino (to_location).
+Clasificar el movimiento usando únicamente el origen inicial y el destino final de la secuencia, no cada transición intermedia.
+No contar cada fila de la consulta como un movimiento independiente.
+Mantener un contador separado de cargas únicas, para distinguir load_number únicos de movimientos productivos.
+
+Ejemplo conceptual:
+
+Load	From	To
+L100	A1-01	A1-02
+L100	A1-02	B1-01
+L100	B1-01	C1-01
+L200	HOI01	A2-05
+L100	C1-01	HOO01
+
+Resultado esperado:
+
+La primera secuencia de L100 cuenta como un movimiento: A1-01 → C1-01.
+L200 cuenta como un movimiento: HOI01 → A2-05.
+La última aparición de L100 cuenta como otro movimiento: C1-01 → HOO01.
+
+Es indispensable conservar el orden original de los registros. No agrupar todos los registros de una misma carga a lo largo del día, porque una misma carga puede generar varios movimientos productivos.
+
+2. Reconocimiento de ubicaciones
+
+Clasificar las ubicaciones según el prefijo de su nombre, sin distinguir entre mayúsculas y minúsculas y eliminando espacios al principio y al final.
+
+Rack: ubicaciones que comienzan con A1, A2, B1, C1, G1, F1, F2, E1, E2 o D1.
+Huellas de Entradas, HOI: ubicaciones que comienzan con HOI.
+Huellas de Salida, HOO: ubicaciones que comienzan con HOO, hand off out.
+Huellas de Entrada, HO1: ubicaciones que comienzan con HO1, hand off in.
+Huellas de Entrada, HO0: ubicaciones que comienzan con HO0, hand off in.
+Bahias de recibo: ubicaciones que comienzan con BRCST o BLDST.
+Bahias de embarques: ubicaciones que comienzan con ASH o AST.
+Lineas de Produccion: ubicaciones que comienzan con STG.
+Lineas de retrabajo: ubicaciones que comienzan con RECALL.
+Almacen de charolas: ubicaciones que comienzan con TRAY o CRITICALTRAY.
+Retornos de lineas de produccion: ubicaciones que comienzan con RTN.
+Otras ubicaciones: cualquier ubicación que no pertenezca a las categorías anteriores, clasificar como otras ubicaciones pero guardar la ubicacion completa aunque se clasifique asi para el conteo de movimientos productivos.
+
+No asumir que todos los nombres de ubicaciones tienen un formato fijo más allá de esos prefijos.
+
+3. Clasificación y detalle de los movimientos
+
+Cada movimiento productivo debe contarse una sola vez y asignarse a una categoría principal.
+
+A. Rack a Rack
+
+Cuando el origen inicial y el destino final son racks válidos, clasificar como Rack a Rack.
+
+Ejemplo: A1-01 → C1-05.
+
+Contar estos movimientos en una métrica específica.
+
+B. Movimientos desde Hand off in hacia rack
+
+Cuando el origen comienza con HOI y el destino es un rack, contar como movimiento hacia rack.
+
+Consolidar el detalle por categoría de origen y destino, evitando listar cada carga individual.
+
+C. Movimientos desde HOO hacia rack
+
+Cuando el origen comienza con HOO o HO1 HO0 y el destino es un rack, contar como movimiento hacia rack.
+
+Mantener una categoría distinguible de los movimientos HOI → Rack.
+
+D. Movimientos desde bahias hacia rack
+
+Cuando el origen comienza con BRCST o BLDSTG y el destino es un rack, contar como movimiento hacia rack.
+
+Mantener una categoría distinguible de las demás.
+
+E. Movimientos entre HOI, HOO, HO1, HO0 y BRCST o BLDSTG.
+
+E.1 Movimientos entre HOO, HO1, HO0, HOS, HOI y una STG, seran surtido a lineas.
+
+Contar y detallar las combinaciones dirigidas entre estas zonas, por ejemplo:
+
+HOI → HOO
+HOO → HOI
+HOI → BRCST o BLDSTG
+BRCST o BLDSTG → HOI o HOO
+HOO → BRCST
+HOO → AST o ASH
+BRCST → HOO
+
+Conservar la dirección del movimiento. No considerar equivalentes HOI → HOO y HOO → HOI.
+Contabilizar los movimientos repetidos, HOO a HOO, HOI a HOI, RTN a RTN, BLD a BLD, y asi sucesivamente, clasificarlos como movimientos repetidos.
+
+F. Movimientos desde HOI hacia otras ubicaciones
+
+Si el origen es HOI y el destino no es rack, HOO, AST, ASH, STG, BLDSTG ni BRCST, contar el movimiento y mostrar el detalle de cada combinación de origen y destino.
+
+No excluir estos movimientos. Sin embargo, agrupar las cantidades por combinación de ubicaciones en lugar de imprimir cada registro individual.
+
+G. Movimientos desde HOO hacia otras ubicaciones
+
+Si el origen es HOO y el destino no pertenece a rack, HOI, AST, ASH, STG, BLDSTG ni BRCST, contar el movimiento y mostrar el detalle por destino.
+
+H. Movimientos desde BRCST hacia otras ubicaciones
+
+Si el origen es BRCST y el destino no pertenece a rack, HOI ni HOO, AST, ASH, BLDSTG, ni STG contar el movimiento y mostrar el detalle de cada combinación de origen y destino.
+
+I. Combinaciones no contempladas
+
+No incluir en el reporte de movimientos productivos las combinaciones cuyo origen no sea rack, HOI, HOO o BRCST y cuyo destino no sea rack.
+
+No clasificarlas automáticamente como «Otros movimientos», ni mezclarlas con las métricas anteriores.
+
+4. Evitar duplicados en los indicadores
+
+Las categorías deben ser mutuamente excluyentes.
+
+Un movimiento Rack → Rack no debe contarse también como otro movimiento hacia rack.
+
+Un movimiento HOI → Rack debe contabilizarse una sola vez en la categoría HOI → Rack.
+
+La suma de las categorías incluidas debe coincidir con el total de movimientos contemplados por las reglas de negocio.
+
+Si una secuencia no tiene origen o destino válido, definir explícitamente cómo manejarla para evitar clasificaciones incorrectas.
+
+5. Agrupación del reporte
+
+Conservar la agrupación existente por:
+
+Fecha laboral.
+Usuario (user_id).
+Turno.
+
+Mantener las ventanas de turno actuales:
+
+07:00–15:00.
+15:00–23:00.
+23:00–07:00.
+
+El turno nocturno entre medianoche y las 06:59 debe asignarse al día laboral anterior.
+
+Mantener el formato de fecha laboral YYYY-MM-DD.
+
+Conservar el conteo de cargas únicas mediante load_number, separado del número de movimientos productivos.
+
+6. Formato de salida
+
+Simplificar el reporte para que muestre, por usuario, fecha laboral y turno:
+
+Total de cargas únicas.
+Total de movimientos productivos contemplados.
+Total de movimientos Rack → Rack.
+Total de movimientos HOI → Rack.
+Total de movimientos HOO → Rack.
+Total de movimientos HOO → STG.
+Total de movimientos HOO → AST o ASH.
+Total de movimientos BRCST o BLDSTG → Rack.
+Total de movimientos BRCST o BLDSTG → HOI.
+Total de movimientos BRCST o BLDSTG → HOO.
+Totales de movimientos entre HOI, HOO y BRCST.
+Totales de movimientos HOI → otras ubicaciones.
+Totales de movimientos HOO → otras ubicaciones.
+Totales de movimientos BRCST → otras ubicaciones.
+Totales de movimientos repetidos.
+
+Incluir el detalle agrupado por combinación de origen y destino, con la cantidad de movimientos de cada combinación.
+
+No imprimir el identificador de cada carga individual ni todas las transiciones intermedias de una secuencia.
+
+No mantener diccionarios de frecuencia de cada from_location y to_location como si cada fila fuera un movimiento.
+
+7. Requisitos técnicos
+Mantener compatibilidad con registros obtenidos mediante un cursor SQLite3 o con objetos sqlite3.Row.
+Conservar los nombres de las columnas existentes.
+Manejar fechas que ya sean objetos datetime o cadenas con el formato %m/%d/%Y %I:%M:%S %p.
+Ignorar de manera controlada los registros inválidos, sin detener todo el procesamiento.
+Evitar estructuras y cálculos innecesarios.
+Usar nombres de variables claros y comentarios breves.
+No alterar la definición de fecha laboral ni de turnos fuera de lo especificado.
+8. Validación antes de implementar
+
+Antes de escribir código:
+
+Explica cómo detectarás el inicio y el final de cada secuencia de carga.
+Explica cómo clasificarás cada movimiento y cómo evitarás contar una misma secuencia en dos categorías.
+Presenta ejemplos con varias filas de la misma carga, una carga que reaparece más tarde y combinaciones de las distintas zonas.
+Identifica cualquier ambigüedad que requiera una decisión adicional.
+Una vez validada la lógica, implementa las dos funciones y muestra un ejemplo del reporte esperado.
+
+El resultado debe ser un reporte de productividad basado en movimientos reales de pallets, no en el número bruto de filas devueltas por SQLite.

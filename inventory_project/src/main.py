@@ -3,7 +3,7 @@ import os
 import sys
 from src.queries.consultas import *
 from src.services.Importador import *
-from src.services.Reportes import reporte_productividad, resumen_productividad_por_usuario, mostrar_reporte_en_pantalla
+from src.services.Reportes import *
 from src.config import DIR_DATABASE, DIR_DATA
 
 # Sube un nivel desde 'src/' para encontrar la raíz del proyecto
@@ -55,11 +55,11 @@ class ImprtadorInventario:
 
 
 def main():
-    nombre_csv_capacidad = 'Inv 28 Oct 2026.csv'
+    nombre_csv_capacidad = 'Inv 04 Nov 2026.csv'
     nombre_csv_productividad = 'Productividad 27 - 10 2026 OMAR.csv'
 
     nombre_db_capacidad = 'Capacidad.db'
-    nombre_db_productividad = 'Productividad 27 - 10 2026 OMAR.db'
+    nombre_db_productividad = 'Productividad.db'
 
     with ImprtadorInventario(nombre_db_productividad) as gestor:
 
@@ -71,10 +71,12 @@ def main():
         #insertar_datos_capacidad(gestor.cursor, nombre_csv_capacidad)
 
 
+        # 1.0   ----------------- Cantidad total de datos insertados o leidos por la BD -----------------
         #total = total_inventario(gestor.cursor, tabla_capacidad)
         #print(f"\t---------- Total real guardado en BD CAPACIDAD: {total} registros.")
 
         
+        # 1.1   ----------------- Contultas de SQL a la base de datos -----------------
         #datos_filtrados = mostrar_datos_tabla(gestor.cursor, tabla_capacidad)
         #print("\tPrimeros 10 datos de la consulta SQlite:\n\n")
         #gestor.imprimir_datos(datos_filtrados)
@@ -96,7 +98,7 @@ def main():
 
 
         # ----------------------------------------- Trabajo de Productividad -----------------------------------------
-
+        
         tabla_productividad = "inventario_productividad"
         
         crear_tabla_productividad(gestor.cursor)
@@ -111,13 +113,12 @@ def main():
         print(f"\t\nTotal de registros: {len(reporte1)}")
         print(f"\t\nPrimeros 10 datos de la consulta SQlite: \n\n")
         
-        #resultado = reporte_productividad(reporte1)
-        #gestor.imprimir_datos(resultado)
+        resultado = reporte_productividad(reporte1)
+        gestor.imprimir_datos(resultado)
 
         resultado2 = resumen_productividad_por_usuario(reporte1)
-        ImprtadorInventario(resultado2)
+        mostrar_reporte_en_pantalla(resultado2)
         
-
 
 
 if __name__ == "__main__":
