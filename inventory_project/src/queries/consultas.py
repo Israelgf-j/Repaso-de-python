@@ -12,8 +12,21 @@ def mostrar_datos_tabla(cursor, tabla):
         query = f"""
             SELECT *
             FROM {tabla}
-            ORDER BY storage_location DESC
+            ORDER BY Last_Updated_Date DESC
             LIMIT 10
+            """
+        
+        cursor.execute(query)
+
+        return cursor.fetchall()
+
+
+def extraer_datos(cursor, tabla):
+        
+        query = f"""
+            SELECT *
+            FROM {tabla}
+            ORDER BY Last_Updated_Date ASC
             """
         
         cursor.execute(query)
