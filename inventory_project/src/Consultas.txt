@@ -27,6 +27,11 @@ FROM tabla
 ORDER BY Last_Updated_Date ASC
 Verifica la dirección del orden recibido. Para reconstruir correctamente los movimientos cronológicos, recomienda el orden ASC si resulta necesario. No inviertas ni reorganices innecesariamente todos los registros en memoria.
 
+Los encabezados que lee el select son: 
+Encabezados: {'from_location': 'From Location', 'to_location': 'To Location', 'activity_code': 'Activity Code', 'operation_code': 'Operation Code', 'user_id': 'User ID', 'item_number': 'Item Number', 'last_updated_date': 'Last Updated Date', 'quantity': 'Quantity', 'load_number': 'Load Number', 'lot_number': 'Lot Number', 'supplier_lot_number': 'Supplier Lot Number'}.
+
+limita el script a solo estos encabezados, si vienen mas, estos no los tomes en cuenta y no te apegues a este orden, trabaja con los encabezados que vienen en la consulta, no con un orden predefinido.
+
 2. Identificación de movimientos productivos
 Una secuencia continua de filas con el mismo load_number representa un único movimiento.
 
@@ -113,14 +118,17 @@ Origen RECIBO y destino HOO.
 I. Movimientos entre familias logísticas
 Identificar y contabilizar las combinaciones entre:
 
-HOI.
-HO0.
-HO1.
-HOO.
-HOS.
-RECIBO.
-EMBARQUE.
-PRODUCCION.
+FAMILIAS_LOGISTICAS = {
+    "HOI",
+    "HO0",
+    "HO1",
+    "HOO",
+    "HOS",
+    "RECIBO",
+    "EMBARQUE",
+    "PRODUCCION"
+}
+
 Mantener el detalle agrupado por ubicación completa de origen y destino.
 
 J. Movimientos repetidos
@@ -284,8 +292,6 @@ Reporte final
 
 Totales y detalles agrupados
 
-La ventaja de esta arquitectura es que la función principal no necesita saber cómo se clasifican todas las ubicaciones mientras está leyendo las filas. Solo necesita detectar secuencias y finalizar movimientos.
-
 Como puntos adicionales:
 
 2. Si cambia el usuario durante una secuencia
@@ -301,5 +307,21 @@ Contabilizarlos como OTROS_MOVIMIENTOS.
 Asignar todo el movimiento a la fecha, usuario y turno de la primera fila.
 
 mantener el algoritmo basado en secuencias, clasificación por familias y contadores incrementales. Es mucho más sencillo de mantener, consume poca memoria y permite agregar nuevas categorías logísticas sin convertir las funciones en bloques interminables de condiciones.
+
+
+¿Qué hacemos cuando aparece una fila sin identificador mientras hay una secuencia activa?
+Finalizar la secuencia y descartar la fila inválida
+
+Si una secuencia termina con una fila sin ubicación, ¿qué destino utilizamos?
+Considerar incompleta la secuencia
+
+Si una carga aparece una sola vez y tiene origen, pero no hay otra ubicación, ¿cómo se contabiliza?
+Secuencia identificada, pero no productiva
+
+¿Cómo tratamos una ubicación que no coincide con ningún prefijo?
+Familia OTRAS; permitir clasificación general
+
+¿Confirmamos que siempre se utiliza la primera fila de la secuencia?
+Sí, atribuir todo al primer registro
 
 

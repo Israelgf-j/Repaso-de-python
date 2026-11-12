@@ -7,7 +7,6 @@ from src.services.ManejoCsv import ManejoCSV
 
 def crear_tabla_capacidad(cursor):
 
-    #_, claves_csv_bd = ManejoCSV.leer_CSV(self.RUTA_CSV
     cursor.execute("DROP TABLE IF EXISTS inventario_capacidad;")
     query = """
         CREATE TABLE inventario_capacidad (
@@ -37,7 +36,6 @@ def crear_tabla_capacidad(cursor):
 def crear_tabla_productividad(cursor):
 
     cursor.execute("DROP TABLE IF EXISTS inventario_productividad;")
-
     query = """
         CREATE TABLE inventario_productividad (
         from_location TEXT,
@@ -74,7 +72,6 @@ def insertar_datos_capacidad(cursor, csv_name):
 
 
 def insertar_datos_productividad(cursor, csv_name):
-
     # Construimos la ruta usando la configuración centralizada
     RUTA_CSV = os.path.join(DIR_DATA, csv_name)
 

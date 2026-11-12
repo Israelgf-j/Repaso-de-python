@@ -83,23 +83,20 @@ def ejecutar_reporte_productividad(nombre_csv_productividad):
         total = total_inventario(gestor.cursor, tabla_productividad)
         print(f"\tTotal real guardado en BD PRODUCTIVIDAD: {total} registros.")
 
-        reporte1 = mostrar_datos_tabla(gestor.cursor, tabla_productividad)
+        reporte1 = extraer_datos(gestor.cursor, tabla_productividad)
         print(f"\tTipo de dato compartido: {type(reporte1[0])}")
         print(f"\tTotal de registros: {len(reporte1)}")
+        gestor.imprimir_datos(reporte1)
         
         print("\n\t[PROCESANDO] Generando Reporte de Productividad...")
-        resultado = reporte_productividad(reporte1)
-        gestor.imprimir_datos(resultado)
-
-        encabezados_de_mis_datos = ["From Location","To Location","Activity Code","Operation Code","User ID","Item Number","Last Updated Date","Quantity","Load Number","Lot Number","Supplier Lot Number"]
-        resultado2 = resumen_productividad_por_usuario(reporte1, encabezados_de_mis_datos)
-        mostrar_reporte_en_pantalla(resultado2)
+        resultado = resumen_productividad_por_usuario(reporte1)
+        mostrar_reporte_en_pantalla(resultado)
 
 
 def main():
     # 1. Configuración del menú de ayuda de la terminal
     parser = argparse.ArgumentParser(
-        description="Sistema Formal de Reportes de Inventario y Productividad.",
+        description="Sistema de Reportes de Inventario y Productividad.",
         formatter_class=argparse.RawTextHelpFormatter
     )
     

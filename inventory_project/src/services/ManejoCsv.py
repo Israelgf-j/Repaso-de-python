@@ -58,7 +58,7 @@ class ManejoCSV:
                             except (ValueError, TypeError):
                                 valor = None  # O None, según prefieras
         
-                        elif columna_sqlite in ("fifo_date", "last_move_date", "manufactured_date", "received_date"):
+                        elif columna_sqlite in ("fifo_date", "last_move_date", "manufactured_date", "received_date", "last_updated_date"):
                             valor = cls.transformar_datos(valor)
                             
                         fila_sqlite[columna_sqlite] = valor
