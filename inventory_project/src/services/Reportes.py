@@ -59,10 +59,7 @@ def resumen_productividad_por_usuario(datos):
         ("D1", "RACK")
     ]
 
-    familias_logisticas = {
-        "HOI", "HO0", "HO1", "HOO",
-        "HOS", "RECIBO", "EMBARQUE", "PRODUCCION"
-    }
+    familias_logisticas = {"HOI", "HO0", "HO1", "HOO", "HOS", "RECIBO", "EMBARQUE", "PRODUCCION"}
 
     # ---------------------------------------------------------
     # 3. Reglas específicas de clasificación
@@ -70,19 +67,27 @@ def resumen_productividad_por_usuario(datos):
 
     reglas_movimientos = {
         ("RACK", "RACK"): "RACK_A_RACK",
+        ("RACK", "HOO"): "RACK_A_HOO",
+        ("RACK", "RECIBO"): "RACK_A_RECIBO",
+        ("RACK", "EMBARQUE"): "RACK_A_EMBARQUE",
+        ("RACK", "HOI"): "RACK_A_HOI",
         ("HOI", "RACK"): "HOI_A_RACK",
         ("HOO", "RACK"): "HOO_A_RACK",
-        ("RECIBO", "RACK"): "RECIBO_A_RACK",
         ("HOO", "PRODUCCION"): "HOO_A_PRODUCCION",
         ("HOO", "EMBARQUE"): "HOO_A_EMBARQUE",
+        ("RECIBO", "RACK"): "RECIBO_A_RACK",
         ("RECIBO", "HOI"): "RECIBO_A_HOI",
-        ("RECIBO", "HO0"): "RECIBO_A_HOI",
-        ("RECIBO", "HO1"): "RECIBO_A_HOI",
+        ("RECIBO", "HO0"): "RECIBO_A_HO_SUPPLY",
+        ("RECIBO", "HO1"): "RECIBO_A_HO_SUPPLY",
         ("RECIBO", "HOO"): "RECIBO_A_HOO"
     }
 
     nombres_categorias = [
         "RACK_A_RACK",
+        "RACK_A_HOO",
+        "RACK_A_RECIBO",
+        "RACK_A_EMBARQUE",
+        "RACK_A_HOI",
         "HOI_A_RACK",
         "HOO_A_RACK",
         "HOO_A_PRODUCCION",
@@ -90,6 +95,7 @@ def resumen_productividad_por_usuario(datos):
         "RECIBO_A_RACK",
         "RECIBO_A_HOI",
         "RECIBO_A_HOO",
+        "RECIBO_A_HO_SUPPLY",
         "ENTRE_FAMILIAS_LOGISTICAS",
         "HOI_OTRAS",
         "HOO_OTRAS",
@@ -572,9 +578,7 @@ def resumen_productividad_por_usuario(datos):
             "usuario": usuario,
             "turno": turno,
             "cargas_unicas": grupo["cargas_unicas"],
-            "movimientos_productivos": grupo[
-                "movimientos_productivos"
-            ],
+            "movimientos_productivos": grupo["movimientos_productivos"],
             "categorias": grupo["categorias"],
             "detalle_ubicaciones": grupo["detalle_ubicaciones"]
         })
@@ -608,6 +612,10 @@ def mostrar_reporte_en_pantalla(lista_reporte):
 
     nombres = {
         "RACK_A_RACK": "Rack → Rack",
+        "RACK_A_HOO": "Rack → HOO",
+        "RACK_A_RECIBO": "Rack → Recibo",
+        "RACK_A_EMBARQUE": "Rack → EMBARQUE",
+        "RACK_A_HOI": "Rack → HOI",
         "HOI_A_RACK": "HOI → Rack",
         "HOO_A_RACK": "HOO → Rack",
         "HOO_A_PRODUCCION": "HOO → STG",
@@ -615,6 +623,7 @@ def mostrar_reporte_en_pantalla(lista_reporte):
         "RECIBO_A_RACK": "Recibo → Rack",
         "RECIBO_A_HOI": "Recibo → HOI/HO0/HO1",
         "RECIBO_A_HOO": "Recibo → HOO",
+        "RECIBO_A_HO_SUPPLY": "Recibo → HO0/HO1",
         "ENTRE_FAMILIAS_LOGISTICAS": "Entre familias logísticas",
         "HOI_OTRAS": "HOI → otras ubicaciones",
         "HOO_OTRAS": "HOO → otras ubicaciones",

@@ -85,7 +85,7 @@ def ejecutar_reporte_productividad(nombre_csv_productividad):
 
         reporte1 = extraer_datos(gestor.cursor, tabla_productividad)
         print(f"\tTipo de dato compartido: {type(reporte1[0])}")
-        print(f"\tTotal de registros: {len(reporte1)}")
+        print(f"\tTotal de registros: {len(reporte1)}\n")
         gestor.imprimir_datos(reporte1)
         
         print("\n\t[PROCESANDO] Generando Reporte de Productividad...")
