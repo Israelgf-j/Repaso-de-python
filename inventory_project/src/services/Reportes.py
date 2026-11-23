@@ -34,6 +34,7 @@ def resumen_productividad_por_usuario(datos):
 
     prefijos_ubicacion = [
         ("CRITICALTRAY", "CHAROLAS"),
+        ("FINISH", "PRODUCCION"),
         ("BRCST", "RECIBO"),
         ("BLDST", "RECIBO"),
         ("RECALL", "RETRABAJO"),
@@ -79,7 +80,11 @@ def resumen_productividad_por_usuario(datos):
         ("RECIBO", "HOI"): "RECIBO_A_HOI",
         ("RECIBO", "HO0"): "RECIBO_A_HO_SUPPLY",
         ("RECIBO", "HO1"): "RECIBO_A_HO_SUPPLY",
-        ("RECIBO", "HOO"): "RECIBO_A_HOO"
+        ("RECIBO", "HOO"): "RECIBO_A_HOO",
+        ("PRODUCCION", "HOI"): "PRODUCCION_A_WH",
+        ("RETORNO", "HOI"): "PRODUCCION_A_WH",
+        ("PRODUCCION", "HO0"): "PRODUCCION_A_SUPPLY",
+        ("PRODUCCION", "HO1"): "PRODUCCION_A_SUPPLY"
     }
 
     nombres_categorias = [
@@ -96,6 +101,8 @@ def resumen_productividad_por_usuario(datos):
         "RECIBO_A_HOI",
         "RECIBO_A_HOO",
         "RECIBO_A_HO_SUPPLY",
+        "PRODUCCION_A_WH",
+        "PRODUCCION_A_SUPPLY",
         "ENTRE_FAMILIAS_LOGISTICAS",
         "HOI_OTRAS",
         "HOO_OTRAS",
@@ -624,6 +631,12 @@ def mostrar_reporte_en_pantalla(lista_reporte):
         "RECIBO_A_HOI": "Recibo → HOI/HO0/HO1",
         "RECIBO_A_HOO": "Recibo → HOO",
         "RECIBO_A_HO_SUPPLY": "Recibo → HO0/HO1",
+
+        # De FINISH a Supply
+        "PRODUCCION_A_SUPPLY": "PRODUCCION → HO0/HO1",
+        # De RTN a Warehouse
+        "PRODUCCION_A_WH": "PRODUCCION → HOI",
+
         "ENTRE_FAMILIAS_LOGISTICAS": "Entre familias logísticas",
         "HOI_OTRAS": "HOI → otras ubicaciones",
         "HOO_OTRAS": "HOO → otras ubicaciones",
@@ -661,9 +674,10 @@ def mostrar_reporte_en_pantalla(lista_reporte):
         print("\nCLASIFICACIÓN DE MOVIMIENTOS")
 
         for categoria, nombre in nombres.items():
-
+            
             cantidad = reporte["categorias"].get(categoria, 0)
 
-            print(f"  {nombre:35}: {cantidad:>6}")
+            if cantidad > 0:
+                print(f"  {nombre:35}: {cantidad:>6}")
 
   

@@ -26,7 +26,7 @@ def extraer_datos(cursor, tabla):
         query = f"""
             SELECT *
             FROM {tabla}
-            ORDER BY Last_Updated_Date ASC
+            ORDER BY Load_Number ASC, Last_Updated_Date ASC
             """
         
         cursor.execute(query)

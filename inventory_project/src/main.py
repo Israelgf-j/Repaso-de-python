@@ -115,8 +115,8 @@ def main():
     args = parser.parse_args()
 
     # Nombres de archivos base (puedes cambiarlos aquí centralizadamente)
-    nombre_csv_capacidad = 'Inv 10 Nov 2026.csv'
-    nombre_csv_productividad = 'Productividad 27 - 10 2026 OMAR.csv'
+    nombre_csv_capacidad = 'Inv 21 Nov 2026.csv'
+    nombre_csv_productividad = '21 Noviembre 2026.csv'
 
     # 4. Orquestador: Dependiendo de lo que pida el usuario, ejecuta una función u otra
     if args.reporte == '24hrs':
