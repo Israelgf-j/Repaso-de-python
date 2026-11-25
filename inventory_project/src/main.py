@@ -23,7 +23,7 @@ class ImprtadorInventario:
         self.connection = sqlite3.connect(self.RUTA_DB)
         self.connection.row_factory = sqlite3.Row   
         self.cursor = self.connection.cursor()
-        print(f"\n\tBase de datos [{os.path.basename(self.RUTA_DB)}] conectada correctamente.") 
+        print(f"\n\n\tBase de datos [{os.path.basename(self.RUTA_DB)}] conectada correctamente.") 
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -91,6 +91,7 @@ def ejecutar_reporte_productividad(nombre_csv_productividad):
         print("\n\t[PROCESANDO] Generando Reporte de Productividad...")
         resultado = resumen_productividad_por_usuario(reporte1)
         mostrar_reporte_en_pantalla(resultado)
+        #mostrar_reporte_en_pantalla_consolidado(resultado)
 
 
 def main():
@@ -115,8 +116,12 @@ def main():
     args = parser.parse_args()
 
     # Nombres de archivos base (puedes cambiarlos aquí centralizadamente)
-    nombre_csv_capacidad = 'Inv 21 Nov 2026.csv'
-    nombre_csv_productividad = '21 Noviembre 2026.csv'
+    nombre_csv_capacidad = 'Inv 24 Nov 2026.csv'
+    #nombre_csv_productividad = '23 Noviembre 2026 - unicos.csv'
+    #nombre_csv_productividad = 'Test FI2654.csv'
+    #nombre_csv_productividad = 'Test FI2669.csv'
+    #nombre_csv_productividad = 'Test 2 FI.csv'
+    nombre_csv_productividad = 'Test Plain.csv'
 
     # 4. Orquestador: Dependiendo de lo que pida el usuario, ejecuta una función u otra
     if args.reporte == '24hrs':

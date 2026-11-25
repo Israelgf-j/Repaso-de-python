@@ -117,6 +117,7 @@ def resumen_productividad_por_usuario(datos):
 
     diagnosticos = {
         "filas_procesadas": 0,
+        "filas_excluidas_activity_code": 0,
         "cargas_unicas": 0,
         "secuencias_identificadas": 0,
         "cambios_secuencia": 0,
@@ -130,6 +131,17 @@ def resumen_productividad_por_usuario(datos):
         "movimientos_sin_categoria_especifica": 0,
         "registros_invalidos": 0
     }
+
+
+    # ---------------------------------------------------------
+    # 4.1. Actividades excluidas
+    # ---------------------------------------------------------
+
+    actividades_excluidas = {
+        "Location Allocate to Empty Clear Automatic",
+        "Cancel Pick",
+        "Location Status Change"
+        }
 
     # ---------------------------------------------------------
     # 5. Preparación del cursor y encabezados
@@ -225,6 +237,17 @@ def resumen_productividad_por_usuario(datos):
 
                 valores[nombre] = valor
 
+            
+            # -------------------------------------------------
+            # 7.1 Ignorar actividades no productivas
+            # -------------------------------------------------
+
+            if (
+                valores["activity_code"] is not None and str(valores["activity_code"]).strip() in actividades_excluidas
+            ):
+                diagnosticos["filas_excluidas_activity_code"] += 1
+                continue
+
             load_actual = valores["load_number"]
 
             if load_actual is None or not str(load_actual).strip():
@@ -235,6 +258,17 @@ def resumen_productividad_por_usuario(datos):
             else:
                 load_actual = str(load_actual).strip()
 
+            # ----------------------------------
+            # Obtencion del usuario actual
+            # ----------------------------------
+
+            usuario_actual = valores["user_id"]
+
+            if usuario_actual is None or not str(usuario_actual).strip():
+                usuario_actual = "(SIN USUARIO)"
+            else:
+                usuario_actual = str(usuario_actual).strip()
+
         else:
             load_actual = None
 
@@ -242,9 +276,7 @@ def resumen_productividad_por_usuario(datos):
         # 8. Detectar el final de una secuencia
         # -----------------------------------------------------
 
-        if secuencia is not None and (
-            load_actual != secuencia["load_number"]
-        ):
+        if secuencia is not None and (load_actual != secuencia["load_number"] or usuario_actual != secuencia["usuario"]):
 
             if not es_fin:
                 diagnosticos["cambios_secuencia"] += 1
@@ -291,7 +323,11 @@ def resumen_productividad_por_usuario(datos):
                             categoria: 0
                             for categoria in nombres_categorias
                         },
-                        "detalle_ubicaciones": {}
+                        "detalle_ubicaciones": {},
+                        "detalle_por_categoria": {
+                            categoria: {}
+                            for categoria in nombres_categorias
+                        }
                     }
 
                 grupo = grupos[clave_grupo]
@@ -380,6 +416,12 @@ def resumen_productividad_por_usuario(datos):
                     diagnosticos["movimientos_productivos"] += 1
                     diagnosticos["movimientos_clasificados"] += 1
 
+                    # Guardar detalle de ubicaciones por categoría.
+
+                    detalle_categoria = grupo["detalle_por_categoria"][categoria]
+                    clave_detalle = (origen, destino)
+                    detalle_categoria[clave_detalle] = (detalle_categoria.get(clave_detalle, 0) + 1)
+
                     if categoria == "OTROS_MOVIMIENTOS":
                         diagnosticos[
                             "movimientos_sin_categoria_especifica"
@@ -403,8 +445,10 @@ def resumen_productividad_por_usuario(datos):
                         detalle.get(clave_detalle, 0) + 1
                     )
 
-            # La secuencia anterior ya fue procesada.
+                    ultimo_destino = secuencia["destino"]
+                    ultimo_load = secuencia["load_number"]
 
+            # La secuencia anterior ya fue procesada.
             secuencia = None
 
         # El centinela permite finalizar la última secuencia.
@@ -480,6 +524,18 @@ def resumen_productividad_por_usuario(datos):
                 usuario = str(usuario).strip()
 
             origen = valores["from_location"]
+
+
+            # Si es una continuación de la misma carga,
+            # utilizar el último destino de la secuencia anterior.
+            if (
+                secuencia is None
+                and 'ultimo_destino' in locals()
+                and ultimo_destino is not None
+            ):
+                if load_actual == ultimo_load:
+                    origen = ultimo_destino
+
 
             if origen is not None:
                 origen = str(origen).strip().upper() or None
@@ -587,7 +643,8 @@ def resumen_productividad_por_usuario(datos):
             "cargas_unicas": grupo["cargas_unicas"],
             "movimientos_productivos": grupo["movimientos_productivos"],
             "categorias": grupo["categorias"],
-            "detalle_ubicaciones": grupo["detalle_ubicaciones"]
+            "detalle_ubicaciones": grupo["detalle_ubicaciones"],
+            "detalle_por_categoria": grupo["detalle_por_categoria"]
         })
 
     # ---------------------------------------------------------
@@ -625,7 +682,7 @@ def mostrar_reporte_en_pantalla(lista_reporte):
         "RACK_A_HOI": "Rack → HOI",
         "HOI_A_RACK": "HOI → Rack",
         "HOO_A_RACK": "HOO → Rack",
-        "HOO_A_PRODUCCION": "HOO → STG",
+        "HOO_A_PRODUCCION": "HOO → PRODUCCION",
         "HOO_A_EMBARQUE": "HOO → ASH/AST",
         "RECIBO_A_RACK": "Recibo → Rack",
         "RECIBO_A_HOI": "Recibo → HOI/HO0/HO1",
@@ -678,6 +735,175 @@ def mostrar_reporte_en_pantalla(lista_reporte):
             cantidad = reporte["categorias"].get(categoria, 0)
 
             if cantidad > 0:
+                
+                if categoria == "ENTRE_FAMILIAS_LOGISTICAS":
+                    print(f"  {nombre:35}: {cantidad:>6} - HOO2 a HO03, HOI1 a HOI2, RTN01 a RTNMOL")
+                    continue
+                
                 print(f"  {nombre:35}: {cantidad:>6}")
 
-  
+
+
+
+        # Impresion de otros movimientos.
+        otros = reporte["detalle_por_categoria"]["OTROS_MOVIMIENTOS"]
+
+        if otros:
+
+            print("\nFecha:", reporte["fecha_laboral"])
+            print("Usuario:", reporte["usuario"])
+            print("Turno:", reporte["turno"])
+
+            print("\nOTROS MOVIMIENTOS:")
+
+            for (origen, destino), cantidad in otros.items():
+
+                print(
+                    f"{origen} -> {destino}: {cantidad}"
+                )
+
+        #break
+
+
+def mostrar_reporte_en_pantalla_consolidado(lista_reporte):
+    """
+    Presenta el reporte de productividad agrupado por fecha y turno.
+
+    Filas: categorías de movimientos.
+    Columnas: usuarios del turno.
+    Cada turno tiene su propia tabla.
+    No modifica los registros originales.
+    """
+
+    if not lista_reporte or not lista_reporte.get("reportes"):
+        print("No existen movimientos para mostrar.")
+        return
+
+    from tabulate import tabulate
+    import shutil
+
+    nombres = {
+        "RACK_A_RACK": "Rack-Rack",
+        "RACK_A_HOO": "Rack-HOO",
+        "RACK_A_RECIBO": "Rack-Recibo",
+        "RACK_A_EMBARQUE": "Rack-Emb",
+        "RACK_A_HOI": "Rack-HOI",
+        "HOI_A_RACK": "HOI-Rack",
+        "HOO_A_RACK": "HOO-Rack",
+        "HOO_A_PRODUCCION": "HOO-STG",
+        "HOO_A_EMBARQUE": "HOO-ASH/AST",
+        "RECIBO_A_RACK": "Rec-Rack",
+        "RECIBO_A_HOI": "Rec-HOI",
+        "RECIBO_A_HOO": "Rec-HOO",
+        "RECIBO_A_HO_SUPPLY": "Rec-Supply",
+        "PRODUCCION_A_SUPPLY": "Prod-Supply",
+        "PRODUCCION_A_WH": "Prod-HOI",
+        "ENTRE_FAMILIAS_LOGISTICAS": "Entre familias",
+        "HOI_OTRAS": "HOI-Otras",
+        "HOO_OTRAS": "HOO-Otras",
+        "RECIBO_OTRAS": "Rec-Otras",
+        "MOVIMIENTOS_REPETIDOS": "Repetidos",
+        "OTROS_MOVIMIENTOS": "Otros"
+    }
+
+    reportes = lista_reporte["reportes"]
+
+    fechas = {}
+
+    for reporte in reportes:
+        fecha = reporte["fecha_laboral"]
+        turno = reporte["turno"]
+
+        fechas.setdefault(fecha, {})
+        fechas[fecha].setdefault(turno, [])
+
+        fechas[fecha][turno].append(reporte)
+
+    ancho_pantalla = shutil.get_terminal_size((120, 30)).columns
+
+    print("\n" + "=" * min(ancho_pantalla, 100))
+    print("       REPORTE GENERAL DE PRODUCTIVIDAD")
+    print("=" * min(ancho_pantalla, 100))
+
+    for fecha, turnos in fechas.items():
+
+        print(f"\nFECHA LABORAL: {fecha}")
+        print("=" * min(ancho_pantalla, 100))
+
+        for turno, registros in turnos.items():
+
+            print(f"\nTURNO: {turno}")
+            print("-" * min(ancho_pantalla, 100))
+
+            # Usuarios sin mostrar el turno en el encabezado
+            usuarios = [r["usuario"] for r in registros]
+
+            ancho_categoria = 18
+            ancho_usuario = 9
+
+            max_columnas = max(
+                1,
+                (ancho_pantalla - ancho_categoria - 8) // ancho_usuario
+            )
+
+            filas = []
+
+            for categoria, nombre in nombres.items():
+
+                cantidades = [
+                    r["categorias"].get(categoria, 0)
+                    for r in registros
+                ]
+
+                # Ocultar categorías sin movimientos
+                if not any(cantidades):
+                    continue
+
+                filas.append([nombre] + cantidades + [sum(cantidades)])
+
+            # Resumen de cargas
+            filas.append(
+                ["CARGAS"] +
+                [r["cargas_unicas"] for r in registros] +
+                [sum(r["cargas_unicas"] for r in registros)]
+            )
+
+            # Resumen de movimientos productivos
+            filas.append(
+                ["MOV. PRODUCTIVOS"] +
+                [r["movimientos_productivos"] for r in registros] +
+                [sum(r["movimientos_productivos"] for r in registros)]
+            )
+
+            # Mostrar usuarios en grupos según el ancho de pantalla
+            for inicio in range(0, len(usuarios), max_columnas):
+
+                fin = inicio + max_columnas
+
+                encabezados = (["CATEGORÍA"] + usuarios[inicio:fin] + ["TOTAL"])
+
+                filas_grupo = []
+
+                for fila in filas:
+                    valores = fila[1 + inicio:1 + fin]
+
+                    filas_grupo.append(
+                        [fila[0]] + valores + [sum(valores)]
+                    )
+
+                print(
+                    tabulate(
+                        filas_grupo,
+                        headers=encabezados,
+                        tablefmt="simple",
+                        numalign="right",
+                        stralign="left"
+                    )
+                )
+
+                if fin < len(usuarios):
+                    print("\n--- SIGUIENTES USUARIOS ---\n")
+
+            print()
+
+    print("=" * min(ancho_pantalla, 100))
